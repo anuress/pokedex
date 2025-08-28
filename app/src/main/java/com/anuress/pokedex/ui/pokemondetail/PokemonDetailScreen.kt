@@ -1,5 +1,6 @@
 package com.anuress.pokedex.ui.pokemondetail
 
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,9 +35,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,14 +47,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
+import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.anuress.data.model.NamedAPIResource
 import com.anuress.data.model.PokemonAbility
 import com.anuress.data.model.PokemonDetail
@@ -95,7 +101,7 @@ private fun formatGender(genderRate: Int): String {
 }
 
 private fun formatEggGroups(eggGroups: List<NamedAPIResource>): String {
-    return eggGroups.joinToString { it.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+    return eggGroups.joinToString { eggGroup -> eggGroup.name.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString() } }
 }
 
 private fun formatEggCycle(hatchCounter: Int?): String {
@@ -118,7 +124,6 @@ private fun formatStatName(statName: String): String {
     }
 }
 
-// Max stat value for normalization
 private const val MAX_STAT_VALUE = 255f
 
 private fun getStatColor(statName: String): Color {
@@ -133,7 +138,6 @@ private fun getStatColor(statName: String): Color {
     }
 }
 
-// Helper function to get a color for a Pokémon type
 fun getTypeColor(typeName: String): Color {
     return when (typeName.lowercase(Locale.getDefault())) {
         "grass" -> Color(0xFF78C850)
@@ -158,7 +162,6 @@ fun getTypeColor(typeName: String): Color {
     }
 }
 
-// Helper function for text color on a given background
 fun getTextColorForBackground(backgroundColor: Color): Color {
     val luminance = (0.299 * backgroundColor.red + 0.587 * backgroundColor.green + 0.114 * backgroundColor.blue)
     return if (luminance < 0.5) Color.White else Color.Black
@@ -172,6 +175,56 @@ fun PokemonDetailScreen(
     viewModel: PokemonDetailViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val defaultBackgroundColor = MaterialTheme.colorScheme.surface
+
+    // Initialize dominantColor with the value from navigation if available
+    var dominantColor by remember(uiState.initialColorInt) {
+        mutableStateOf(uiState.initialColorInt?.let { Color(it) })
+    }
+
+    val currentTopSectionBackgroundColor = dominantColor ?: defaultBackgroundColor
+    val topSectionTextColor = getTextColorForBackground(currentTopSectionBackgroundColor)
+
+    // LaunchedEffect to extract color from the detail image
+    // This will run if initialColorInt was null, or potentially refine the color if one was passed
+    LaunchedEffect(uiState.pokemonDetail?.sprites?.other?.officialArtwork?.frontDefault) {
+        val imageUrl = uiState.pokemonDetail?.sprites?.other?.officialArtwork?.frontDefault
+        if (imageUrl == null) {
+            // If there's no image URL, and no initial color was set, don't try to load.
+            // If an initial color was set, we keep it.
+            if (dominantColor == null) dominantColor = null // Explicitly set to null if no image and no initial
+            return@LaunchedEffect
+        }
+
+        val imageLoader = context.imageLoader
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .allowHardware(false) // Important for Palette
+            .build()
+        try {
+            when (val result = imageLoader.execute(request)) {
+                is SuccessResult -> {
+                    if (result.drawable is BitmapDrawable) {
+                        val bitmap = (result.drawable as BitmapDrawable).bitmap
+                        Palette.from(bitmap).generate { palette ->
+                            dominantColor = palette?.dominantSwatch?.rgb?.let { Color(it) }
+                        }
+                    }
+                }
+                else -> {
+                    // If image loading fails, and no initial color was set, set to null.
+                    // If an initial color was set, we might choose to keep it or clear it.
+                    // For now, let's clear it to indicate an issue with the detail image's color.
+                    // Alternatively, we could preserve uiState.initialColorInt if it was valid.
+                    if (uiState.initialColorInt == null) dominantColor = null
+                }
+            }
+        } catch (_: Exception) {
+            // If exception occurs, and no initial color was set, set to null.
+            if (uiState.initialColorInt == null) dominantColor = null
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -186,14 +239,18 @@ fun PokemonDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                    containerColor = currentTopSectionBackgroundColor,
+                    navigationIconContentColor = topSectionTextColor,
+                    titleContentColor = topSectionTextColor
                 )
             )
         }
     ) { paddingValues ->
         PokemonDetailScreenContent(
             uiState = uiState,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
+            currentTopSectionBackgroundColor = currentTopSectionBackgroundColor,
+            topSectionTextColor = topSectionTextColor
         )
     }
 }
@@ -218,31 +275,36 @@ fun PokemonTypeChip(typeName: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modifier = Modifier) {
+fun PokemonDetailScreenContent(
+    uiState: PokemonDetailScreenState,
+    modifier: Modifier = Modifier,
+    currentTopSectionBackgroundColor: Color,
+    topSectionTextColor: Color
+) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabTitles = listOf("About", "Base Stats", "Evolution", "Moves")
 
     Box(
         modifier = modifier
-            .fillMaxSize()
-            .padding(top = 0.dp),
+            .fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
         when {
-            uiState.isLoading -> {
+            uiState.isLoading && uiState.initialColorInt == null -> { // Show loading only if no initial color
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
             uiState.errorMessage != null -> {
                 Text(
-                    text = uiState.errorMessage!!,
+                    text = uiState.errorMessage,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.align(Alignment.Center).padding(16.dp)
                 )
             }
             uiState.pokemonDetail != null && uiState.pokemonSpecies != null -> {
-                val detail = uiState.pokemonDetail!!
-                val species = uiState.pokemonSpecies!!
+                val detail = uiState.pokemonDetail
+                val species = uiState.pokemonSpecies
+                val imageUrl = detail.sprites.other?.officialArtwork?.frontDefault
 
                 Column(
                     modifier = Modifier.fillMaxSize()
@@ -251,16 +313,22 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .verticalScroll(rememberScrollState()), // Make top part scrollable if content overflows
+                            .background(currentTopSectionBackgroundColor)
+                            .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 24.dp)
+                            .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        AsyncImage(
-                            model = detail.sprites.other?.officialArtwork?.frontDefault,
-                            contentDescription = detail.name,
-                            modifier = Modifier.size(200.dp)
-                        )
+                        if (uiState.isLoading && imageUrl == null) { // Still show loader if image specifically is loading
+                             CircularProgressIndicator(modifier = Modifier.size(100.dp).align(Alignment.CenterHorizontally).padding(bottom=50.dp))
+                        } else {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = detail.name,
+                                modifier = Modifier.size(200.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -271,12 +339,13 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                                     if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
                                 },
                                 style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                                color = topSectionTextColor,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
                                 text = "#${detail.id.toString().padStart(3, '0')}",
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = topSectionTextColor.copy(alpha = 0.7f)
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -288,7 +357,6 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                                 PokemonTypeChip(typeName = pokemonType.type.name)
                             }
                         }
-                        Spacer(modifier = Modifier.height(24.dp))
                     }
 
                     PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
@@ -303,19 +371,25 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
 
                     Box(modifier = Modifier.weight(1f).padding(16.dp)) {
                         when (selectedTabIndex) {
-                            0 -> PokemonAboutSection(detail = detail, species = species) // This needs scroll if content is large
-                            1 -> PokemonBaseStatsSection(detail = detail) // This needs scroll if content is large
+                            0 -> PokemonAboutSection(detail = detail, species = species)
+                            1 -> PokemonBaseStatsSection(detail = detail)
                             2 -> Text("Evolution Content - Coming Soon!", style = MaterialTheme.typography.bodyLarge)
                             3 -> PokemonMovesSection(detail = detail)
                         }
                     }
                 }
             }
+            // Fallback for when data is not loading, no error, but also no details (should ideally not happen if isLoading is handled correctly)
+            // Or if isLoading is true but an initialColorInt was provided, we show content with potential shimmer/placeholder for image.
             else -> {
-                Text(
-                    "No Pokémon data available.",
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
-                )
+                 if (uiState.isLoading) { // Content is displayed because of initialColorInt, but data is still loading
+                     Column(modifier = Modifier.fillMaxSize()) { /* Show skeleton or current content */ }
+                 } else {
+                     Text(
+                        "No Pokémon data available.",
+                        modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                    )
+                 }
             }
         }
     }
@@ -324,7 +398,7 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
 @Composable
 fun PokemonAboutSection(detail: PokemonDetail, species: PokemonSpecies) {
     Column(
-        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), // Added scroll for potentially long content
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         AboutDetailItem(label = "Species", value = species.genera.firstOrNull { it.language.name == "en" }?.genus ?: "Unknown")
@@ -365,7 +439,7 @@ fun AboutDetailItem(label: String, value: String) {
 @Composable
 fun PokemonBaseStatsSection(detail: PokemonDetail) {
     Column(
-        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), // Added scroll for potentially long content
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         detail.stats.forEach { statEntry ->
@@ -389,10 +463,10 @@ fun StatRow(stat: PokemonStat) {
         Text(
             text = statName,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.width(80.dp) // Fixed width for stat name
+            modifier = Modifier.width(80.dp)
         )
         Text(
-            text = statValue.toString().padStart(3), // Pad for consistent alignment
+            text = statValue.toString().padStart(3),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             modifier = Modifier.width(40.dp),
             textAlign = TextAlign.End
@@ -401,11 +475,11 @@ fun StatRow(stat: PokemonStat) {
             progress = { progress },
             modifier = Modifier
                 .weight(1f)
-                .height(10.dp) // Adjusted height for a thicker bar
-                .clip(RoundedCornerShape(4.dp)), // Rounded corners for progress bar
+                .height(10.dp)
+                .clip(RoundedCornerShape(4.dp)),
             color = statColor,
-            trackColor = statColor.copy(alpha = 0.3f), // Lighter track color
-            strokeCap = StrokeCap.Round // Rounded caps for the progress bar
+            trackColor = statColor.copy(alpha = 0.3f),
+            strokeCap = StrokeCap.Round
         )
     }
 }
@@ -459,8 +533,12 @@ fun MoveRow(move: PokemonMove) {
 @Composable
 fun PokemonDetailScreenLoadingPreview() {
     PokedexTheme {
+        val defaultBg = MaterialTheme.colorScheme.surface
+        val defaultText = getTextColorForBackground(defaultBg)
         PokemonDetailScreenContent(
-            uiState = PokemonDetailScreenState(isLoading = true)
+            uiState = PokemonDetailScreenState(isLoading = true, initialColorInt = null),
+            currentTopSectionBackgroundColor = defaultBg,
+            topSectionTextColor = defaultText
         )
     }
 }
@@ -469,8 +547,10 @@ fun PokemonDetailScreenLoadingPreview() {
 @Composable
 fun PokemonDetailScreenDataPreview() {
     PokedexTheme {
-        // To see Base Stats in preview, set selectedTabIndex = 1
-        // For now, PokemonDetailScreenContent preview will show "About" by default.
+        val previewColorInt = Color.Magenta.hashCode() // Example initial color for preview
+        val previewColor = Color(previewColorInt)
+        val previewTextColor = getTextColorForBackground(previewColor)
+
         PokemonDetailScreenContent(
             uiState = PokemonDetailScreenState(
                 isLoading = false,
@@ -513,8 +593,11 @@ fun PokemonDetailScreenDataPreview() {
                     eggGroups = listOf(NamedAPIResource("monster", ""), NamedAPIResource("grass", "")),
                     genera = listOf(com.anuress.data.model.Genus("Seed Pokémon", NamedAPIResource("en", "")))
                 ),
-                errorMessage = null
-            )
+                errorMessage = null,
+                initialColorInt = previewColorInt
+            ),
+            currentTopSectionBackgroundColor = previewColor, // Use the passed color for preview
+            topSectionTextColor = previewTextColor
         )
     }
 }
@@ -523,11 +606,16 @@ fun PokemonDetailScreenDataPreview() {
 @Composable
 fun PokemonDetailScreenErrorPreview() {
     PokedexTheme {
+        val defaultBg = MaterialTheme.colorScheme.surface
+        val defaultText = getTextColorForBackground(defaultBg)
         PokemonDetailScreenContent(
             uiState = PokemonDetailScreenState(
                 isLoading = false,
-                errorMessage = "Failed to load Pokémon details. Please try again."
-            )
+                errorMessage = "Failed to load Pokémon details. Please try again.",
+                initialColorInt = null
+            ),
+            currentTopSectionBackgroundColor = defaultBg,
+            topSectionTextColor = defaultText
         )
     }
 }
@@ -605,7 +693,7 @@ fun PokemonMovesSectionPreview() {
                 PokemonMove("Leech Seed", "Level 9", 9),
                 PokemonMove("Razor Leaf", "Machine (TM/TR)", null),
                 PokemonMove("Seed Bomb", "Egg Move", null),
-                PokemonMove("Solar Beam", "Tutor", null),
+                PokemonMove ("Solar Beam", "Tutor", null),
                 PokemonMove("Sleep Powder", "Level 13", 13),
                 PokemonMove("Poison Powder", "Level 13", 13),
                 PokemonMove("Take Down", "Level 15", 15),

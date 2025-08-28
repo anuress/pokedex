@@ -1,23 +1,23 @@
 package com.anuress.pokedex
 
-import androidx.compose.foundation.clickable // Added import
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-// import androidx.compose.foundation.lazy.grid.items // Using foundation items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.navigation.NavHostController // Added import
+import androidx.navigation.NavHostController
 import androidx.palette.graphics.Palette
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
@@ -39,9 +39,10 @@ fun getTextColorForBackground(backgroundColor: Color): Color {
 fun PokemonCard(
     pokemon: Pokemon,
     modifier: Modifier = Modifier,
-    onPokemonClick: (Pokemon) -> Unit // Added callback for click
+    onPokemonClick: (Pokemon, Int?) -> Unit // Updated callback for click with color
 ) {
     var cardColor by remember { mutableStateOf(Color.LightGray) }
+    var cardColorInt by remember { mutableStateOf<Int?>(null) } // Store color as Int for navigation
     val textColor = getTextColorForBackground(cardColor)
     val context = LocalContext.current
 
@@ -50,7 +51,7 @@ fun PokemonCard(
             .width(160.dp)
             .height(200.dp)
             .padding(4.dp)
-            .clickable { onPokemonClick(pokemon) }, // Made card clickable
+            .clickable { onPokemonClick(pokemon, cardColorInt) }, // Pass pokemon and colorInt
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
@@ -70,6 +71,7 @@ fun PokemonCard(
                         Palette.from(bitmap).generate { palette ->
                             palette?.dominantSwatch?.rgb?.let {
                                 cardColor = Color(it)
+                                cardColorInt = it // Store the Int value
                             }
                         }
                     })
@@ -95,7 +97,7 @@ fun PokemonCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PokedexScreen(
-    navController: NavHostController, // Added NavController parameter
+    navController: NavHostController,
     viewModel: PokedexViewModel = koinViewModel()
 ) {
     val pokemonPagingItems: LazyPagingItems<Pokemon> = viewModel.pokemonPagingFlow.collectAsLazyPagingItems()
@@ -133,10 +135,12 @@ fun PokedexScreen(
                             if (pokemon != null) {
                                 PokemonCard(
                                     pokemon = pokemon,
-                                    onPokemonClick = { selectedPokemon ->
-                                        navController.navigate(
-                                            "${PokedexDestinations.POKEMON_DETAIL_ROUTE_BASE}/${selectedPokemon.id}"
-                                        )
+                                    onPokemonClick = { selectedPokemon, colorInt ->
+                                        var route = "${PokedexDestinations.POKEMON_DETAIL_ROUTE_BASE}/${selectedPokemon.id}"
+                                        if (colorInt != null) {
+                                            route += "?color=$colorInt"
+                                        }
+                                        navController.navigate(route)
                                     }
                                 )
                             }
@@ -175,7 +179,7 @@ fun PokemonCardPreview() {
     PokedexTheme {
         PokemonCard(
             pokemon = Pokemon(1, "Bulbasaur", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png"),
-            onPokemonClick = {} // Pass empty lambda for preview
+            onPokemonClick = { _, _ -> } // Pass empty lambda for preview
         )
     }
 }

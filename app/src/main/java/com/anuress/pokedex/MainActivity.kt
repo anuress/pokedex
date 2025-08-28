@@ -39,11 +39,15 @@ fun PokedexApp() {
             }
             composable(
                 route = PokedexDestinations.POKEMON_DETAIL_ROUTE_WITH_ARG,
-                arguments = listOf(navArgument(PokedexDestinations.POKEMON_ID_ARG) {
-                    type = NavType.IntType
-                })
-            ) { // backStackEntry ->
-                // PokemonDetailViewModel will get the pokemonId from SavedStateHandle
+                arguments = listOf(
+                    navArgument(PokedexDestinations.POKEMON_ID_ARG) { type = NavType.IntType },
+                    navArgument(PokedexDestinations.POKEMON_COLOR_ARG) {
+                        type = NavType.StringType // Changed to StringType
+                        nullable = true
+                        defaultValue = null // Explicitly null default
+                    }
+                )
+            ) {
                 // Pass navController for potential back navigation from detail screen
                 PokemonDetailScreen(navController = navController)
             }
