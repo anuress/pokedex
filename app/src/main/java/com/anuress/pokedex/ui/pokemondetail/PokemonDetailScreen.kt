@@ -176,19 +176,19 @@ fun PokemonDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val defaultBackgroundColor = MaterialTheme.colorScheme.surface
+    val defaultTopSectionBgColor = MaterialTheme.colorScheme.surface 
 
     var dominantColor by remember(uiState.initialColorInt) {
         mutableStateOf(uiState.initialColorInt?.let { Color(it) })
     }
 
-    val currentTopSectionBackgroundColor = dominantColor ?: defaultBackgroundColor
-    val topSectionTextColor = getTextColorForBackground(currentTopSectionBackgroundColor)
+    val topSectionBackgroundColor = dominantColor ?: defaultTopSectionBgColor
+    val topSectionTextColor = getTextColorForBackground(topSectionBackgroundColor)
 
     LaunchedEffect(uiState.pokemonDetail?.sprites?.other?.officialArtwork?.frontDefault) {
         val imageUrl = uiState.pokemonDetail?.sprites?.other?.officialArtwork?.frontDefault
         if (imageUrl == null) {
-            if (dominantColor == null) dominantColor = null 
+            if (uiState.initialColorInt == null) dominantColor = null
             return@LaunchedEffect
         }
 
@@ -229,7 +229,7 @@ fun PokemonDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = currentTopSectionBackgroundColor,
+                    containerColor = topSectionBackgroundColor,
                     navigationIconContentColor = topSectionTextColor,
                     titleContentColor = topSectionTextColor
                 )
@@ -239,7 +239,7 @@ fun PokemonDetailScreen(
         PokemonDetailScreenContent(
             uiState = uiState,
             modifier = Modifier.padding(paddingValues),
-            currentTopSectionBackgroundColor = currentTopSectionBackgroundColor,
+            topSectionBackgroundColor = topSectionBackgroundColor,
             topSectionTextColor = topSectionTextColor
         )
     }
@@ -253,7 +253,7 @@ fun PokemonTypeChip(typeName: String) {
         color = typeColor,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.padding(horizontal = 4.dp),
-        shadowElevation = 6.dp 
+        shadowElevation = 6.dp
     ) {
         Text(
             text = typeName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
@@ -269,19 +269,18 @@ fun PokemonTypeChip(typeName: String) {
 fun PokemonDetailScreenContent(
     uiState: PokemonDetailScreenState,
     modifier: Modifier = Modifier,
-    currentTopSectionBackgroundColor: Color,
-    topSectionTextColor: Color
+    topSectionBackgroundColor: Color, 
+    topSectionTextColor: Color 
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabTitles = listOf("About", "Base Stats", "Evolution", "Moves")
 
     Box(
-        modifier = modifier
-            .fillMaxSize(),
+        modifier = modifier.fillMaxSize(), 
         contentAlignment = Alignment.TopCenter
     ) {
         when {
-            uiState.isLoading && uiState.initialColorInt == null -> { 
+            uiState.isLoading && uiState.initialColorInt == null -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
             uiState.errorMessage != null -> {
@@ -297,20 +296,17 @@ fun PokemonDetailScreenContent(
                 val species = uiState.pokemonSpecies
                 val imageUrl = detail.sprites.other?.officialArtwork?.frontDefault
 
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                Column(modifier = Modifier.fillMaxSize().background(topSectionBackgroundColor)) {
                     // Top Section: Name, ID, Types, Image
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(currentTopSectionBackgroundColor)
                             .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 24.dp)
                             .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally // Keep overall column centered
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(), // This Row for Name/ID is fine as is
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -328,52 +324,82 @@ fun PokemonDetailScreenContent(
                                 color = topSectionTextColor.copy(alpha = 0.7f)
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp)) 
-
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start // Changed to Start for left alignment
+                            horizontalArrangement = Arrangement.Start
                         ) {
                             detail.types.forEach { pokemonType ->
                                 PokemonTypeChip(typeName = pokemonType.type.name)
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp)) 
-
-                        if (uiState.isLoading && imageUrl == null) { 
-                             CircularProgressIndicator(modifier = Modifier.size(100.dp).align(Alignment.CenterHorizontally).padding(bottom=50.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (uiState.isLoading && imageUrl == null) {
+                             CircularProgressIndicator(
+                                 modifier = Modifier.size(100.dp).align(Alignment.CenterHorizontally).padding(bottom=50.dp),
+                                 color = topSectionTextColor 
+                             )
                         } else {
                             AsyncImage(
                                 model = imageUrl,
                                 contentDescription = detail.name,
-                                modifier = Modifier.size(200.dp) // Image itself remains centered due to Column's horizontalAlignment
+                                modifier = Modifier.size(200.dp)
                             )
                         }
                     }
 
-                    PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
-                        tabTitles.forEachIndexed { index, title ->
-                            Tab(
-                                selected = selectedTabIndex == index,
-                                onClick = { selectedTabIndex = index },
-                                text = { Text(title, style = MaterialTheme.typography.titleSmall) }
-                            )
-                        }
-                    }
+                    // "Bottom Sheet" Panel for Tabs and Content
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f), 
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                        color = MaterialTheme.colorScheme.surface, 
+                        shadowElevation = 0.dp
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) { 
+                            PrimaryTabRow(
+                                selectedTabIndex = selectedTabIndex,
+                                containerColor = Color.Transparent, 
+                                contentColor = MaterialTheme.colorScheme.primary 
+                            ) {
+                                tabTitles.forEachIndexed { index, title ->
+                                    Tab(
+                                        selected = selectedTabIndex == index,
+                                        onClick = { selectedTabIndex = index },
+                                        text = { Text(title, style = MaterialTheme.typography.titleSmall) },
+                                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
 
-                    Box(modifier = Modifier.weight(1f).padding(16.dp)) {
-                        when (selectedTabIndex) {
-                            0 -> PokemonAboutSection(detail = detail, species = species)
-                            1 -> PokemonBaseStatsSection(detail = detail)
-                            2 -> Text("Evolution Content - Coming Soon!", style = MaterialTheme.typography.bodyLarge)
-                            3 -> PokemonMovesSection(detail = detail)
+                            // Box for Tab Content - inherits background from Surface
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f) 
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                // Text color for these sections will be default (e.g. onSurface)
+                                when (selectedTabIndex) {
+                                    0 -> PokemonAboutSection(detail = detail, species = species)
+                                    1 -> PokemonBaseStatsSection(detail = detail)
+                                    2 -> Text(
+                                        "Evolution Content - Coming Soon!", 
+                                        style = MaterialTheme.typography.bodyLarge 
+                                        // Default text color will be onSurface, which is correct here
+                                    )
+                                    3 -> PokemonMovesSection(detail = detail)
+                                }
+                            }
                         }
                     }
                 }
             }
             else -> {
-                 if (uiState.isLoading) { 
-                     Column(modifier = Modifier.fillMaxSize()) { /* Show skeleton or current content */ }
+                 if (uiState.isLoading) {
+                     Column(modifier = Modifier.fillMaxSize()) { /* Global skeleton */ }
                  } else {
                      Text(
                         "No Pokémon data available.",
@@ -397,8 +423,12 @@ fun PokemonAboutSection(detail: PokemonDetail, species: PokemonSpecies) {
         AboutDetailItem(label = "Abilities", value = formatAbilities(detail.abilities))
 
         Spacer(modifier = Modifier.height(8.dp))
-        Text("Breeding", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            "Breeding", 
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface // Explicitly use onSurface for clarity
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
         AboutDetailItem(label = "Gender", value = formatGender(species.genderRate))
         AboutDetailItem(label = "Egg Groups", value = formatEggGroups(species.eggGroups))
@@ -415,13 +445,15 @@ fun AboutDetailItem(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.width(100.dp)
+            modifier = Modifier.width(100.dp),
+            color = MaterialTheme.colorScheme.onSurface // Explicitly use onSurface
         )
         Spacer(Modifier.width(16.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface // Explicitly use onSurface
         )
     }
 }
@@ -442,7 +474,7 @@ fun PokemonBaseStatsSection(detail: PokemonDetail) {
 fun StatRow(stat: PokemonStat) {
     val statValue = stat.baseStat
     val statName = formatStatName(stat.stat.name)
-    val statColor = getStatColor(stat.stat.name)
+    val statMeterColor = getStatColor(stat.stat.name) 
     val progress = statValue / MAX_STAT_VALUE
 
     Row(
@@ -453,28 +485,29 @@ fun StatRow(stat: PokemonStat) {
         Text(
             text = statName,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.width(80.dp)
+            modifier = Modifier.width(80.dp),
+            color = MaterialTheme.colorScheme.onSurface // Explicitly use onSurface
         )
         Text(
             text = statValue.toString().padStart(3),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             modifier = Modifier.width(40.dp),
-            textAlign = TextAlign.End
+            textAlign = TextAlign.End,
+            color = MaterialTheme.colorScheme.onSurface // Explicitly use onSurface
         )
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier
                 .weight(1f)
                 .height(10.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            color = statColor,
-            trackColor = statColor.copy(alpha = 0.3f),
+                .clip(RoundedCornerShape(4.dp)), // clip is for LinearProgressIndicator itself
+            color = statMeterColor,
+            trackColor = statMeterColor.copy(alpha = 0.3f),
             strokeCap = StrokeCap.Round
         )
     }
 }
 
-// --- MOVES SECTION ---
 @Composable
 fun PokemonMovesSection(detail: PokemonDetail, modifier: Modifier = Modifier) {
     if (detail.moves.isEmpty()) {
@@ -482,7 +515,8 @@ fun PokemonMovesSection(detail: PokemonDetail, modifier: Modifier = Modifier) {
             text = "No moves information available for this Pokémon.",
             style = MaterialTheme.typography.bodyLarge,
             modifier = modifier.padding(16.dp).fillMaxWidth(),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface // Explicitly use onSurface
         )
         return
     }
@@ -490,7 +524,7 @@ fun PokemonMovesSection(detail: PokemonDetail, modifier: Modifier = Modifier) {
     LazyColumn(modifier = modifier.fillMaxSize()) {
         items(detail.moves) { move ->
             MoveRow(move = move)
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
 }
@@ -507,12 +541,13 @@ fun MoveRow(move: PokemonMove) {
         Text(
             text = move.name,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface // Explicitly use onSurface
         )
         Text(
             text = move.learnMethodDescription,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant // Use onSurfaceVariant for less emphasis
         )
     }
 }
@@ -523,12 +558,10 @@ fun MoveRow(move: PokemonMove) {
 @Composable
 fun PokemonDetailScreenLoadingPreview() {
     PokedexTheme {
-        val defaultBg = MaterialTheme.colorScheme.surface
-        val defaultText = getTextColorForBackground(defaultBg)
         PokemonDetailScreenContent(
             uiState = PokemonDetailScreenState(isLoading = true, initialColorInt = null),
-            currentTopSectionBackgroundColor = defaultBg,
-            topSectionTextColor = defaultText
+            topSectionBackgroundColor = MaterialTheme.colorScheme.surface, 
+            topSectionTextColor = getTextColorForBackground(MaterialTheme.colorScheme.surface)
         )
     }
 }
@@ -537,57 +570,53 @@ fun PokemonDetailScreenLoadingPreview() {
 @Composable
 fun PokemonDetailScreenDataPreview() {
     PokedexTheme {
-        val previewColorInt = Color.Magenta.hashCode() // Example initial color for preview
-        val previewColor = Color(previewColorInt)
-        val previewTextColor = getTextColorForBackground(previewColor)
+        val previewDominantColor = Color(0xFFF08030) // Example Fire type color (Charizard)
+        val previewTopSectionTextColor = getTextColorForBackground(previewDominantColor)
 
         PokemonDetailScreenContent(
             uiState = PokemonDetailScreenState(
                 isLoading = false,
                 pokemonDetail = PokemonDetail(
-                    id = 1, name = "bulbasaur", height = 7, weight = 69,
+                    id = 6, name = "charizard", height = 17, weight = 905,
                     abilities = listOf(
-                        PokemonAbility(NamedAPIResource("overgrow", ""), false, 1),
-                        PokemonAbility(NamedAPIResource("chlorophyll", ""), true, 3)
+                        PokemonAbility(NamedAPIResource("blaze", ""), false, 1),
+                        PokemonAbility(NamedAPIResource("solar-power", ""), true, 3)
                     ),
-                    species = NamedAPIResource("bulbasaur", ""),
+                    species = NamedAPIResource("charizard", ""),
                     sprites = com.anuress.data.model.PokemonSprites(
                         other = com.anuress.data.model.OtherSprites(
                             officialArtwork = com.anuress.data.model.OfficialArtworkSprite(
-                                "https.raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png"
+                                "https.raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png"
                             )
                         )
                     ),
                     types = listOf(
-                        com.anuress.data.model.PokemonType(1, NamedAPIResource("grass", "")),
-                        com.anuress.data.model.PokemonType(2, NamedAPIResource("poison", ""))
+                        com.anuress.data.model.PokemonType(1, NamedAPIResource("fire", "")),
+                        com.anuress.data.model.PokemonType(2, NamedAPIResource("flying", ""))
                     ),
                     stats = listOf(
-                        PokemonStat(NamedAPIResource("hp", ""), 45, 0),
-                        PokemonStat(NamedAPIResource("attack", ""), 49, 0),
-                        PokemonStat(NamedAPIResource("defense", ""), 49, 0),
-                        PokemonStat(NamedAPIResource("special-attack", ""), 65, 0),
-                        PokemonStat(NamedAPIResource("special-defense", ""), 65, 0),
-                        PokemonStat(NamedAPIResource("speed", ""), 45, 0)
+                        PokemonStat(NamedAPIResource("hp", ""), 78, 0),
+                        PokemonStat(NamedAPIResource("attack", ""), 84, 0),
+                        PokemonStat(NamedAPIResource("defense", ""), 78, 0),
+                        PokemonStat(NamedAPIResource("special-attack", ""), 109, 0),
+                        PokemonStat(NamedAPIResource("special-defense", ""), 85, 0),
+                        PokemonStat(NamedAPIResource("speed", ""), 100, 0)
                     ),
                     moves = listOf(
-                        PokemonMove("Tackle", "Level 1", 1),
-                        PokemonMove("Growl", "Level 1", 1),
-                        PokemonMove("Vine Whip", "Level 5", 5),
-                        PokemonMove("Razor Leaf", "Machine (TM/TR)", null),
-                        PokemonMove("Seed Bomb", "Egg Move", null)
+                        PokemonMove("Flamethrower", "Level 40", 40),
+                        PokemonMove("Fly", "Machine (HM)", null)
                     )
                 ),
                 pokemonSpecies = PokemonSpecies(
-                    id = 1, name = "bulbasaur", genderRate = 1, hatchCounter = 20,
-                    eggGroups = listOf(NamedAPIResource("monster", ""), NamedAPIResource("grass", "")),
-                    genera = listOf(com.anuress.data.model.Genus("Seed Pokémon", NamedAPIResource("en", "")))
+                    id = 6, name = "charizard", genderRate = 1, hatchCounter = 20,
+                    eggGroups = listOf(NamedAPIResource("monster", ""), NamedAPIResource("dragon", "")),
+                    genera = listOf(com.anuress.data.model.Genus("Flame Pokémon", NamedAPIResource("en", "")))
                 ),
                 errorMessage = null,
-                initialColorInt = previewColorInt
+                initialColorInt = previewDominantColor.hashCode()
             ),
-            currentTopSectionBackgroundColor = previewColor, // Use the passed color for preview
-            topSectionTextColor = previewTextColor
+            topSectionBackgroundColor = previewDominantColor,
+            topSectionTextColor = previewTopSectionTextColor
         )
     }
 }
@@ -596,27 +625,20 @@ fun PokemonDetailScreenDataPreview() {
 @Composable
 fun PokemonDetailScreenErrorPreview() {
     PokedexTheme {
-        val defaultBg = MaterialTheme.colorScheme.surface
-        val defaultText = getTextColorForBackground(defaultBg)
         PokemonDetailScreenContent(
             uiState = PokemonDetailScreenState(
                 isLoading = false,
                 errorMessage = "Failed to load Pokémon details. Please try again.",
                 initialColorInt = null
             ),
-            currentTopSectionBackgroundColor = defaultBg,
-            topSectionTextColor = defaultText
+            topSectionBackgroundColor = MaterialTheme.colorScheme.errorContainer, 
+            topSectionTextColor = MaterialTheme.colorScheme.onErrorContainer
         )
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PokemonTypeChipPreview() {
-    PokedexTheme { Row { PokemonTypeChip(typeName = "Grass"); PokemonTypeChip(typeName = "Poison") } }
-}
-
-@Preview(showBackground = true)
+// Previews for sub-sections now assume they are on a standard Surface background
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF) // Simulate white Surface BG
 @Composable
 fun PokemonAboutSectionPreview() {
     PokedexTheme {
@@ -626,22 +648,20 @@ fun PokemonAboutSectionPreview() {
                 PokemonAbility(NamedAPIResource("overgrow", ""), false, 1),
                 PokemonAbility(NamedAPIResource("chlorophyll", ""), true, 3)
             ),
-            species = NamedAPIResource("",""),
-            sprites = com.anuress.data.model.PokemonSprites(),
-            types = emptyList(),
-            stats = emptyList(),
-            moves = emptyList()
+            species = NamedAPIResource("",""), sprites = com.anuress.data.model.PokemonSprites(), types = emptyList(), stats = emptyList(), moves = emptyList()
         )
         val sampleSpecies = PokemonSpecies(
             id = 1, name = "bulbasaur", genderRate = 1, hatchCounter = 20,
             eggGroups = listOf(NamedAPIResource("monster", ""), NamedAPIResource("grass", "")),
             genera = listOf(com.anuress.data.model.Genus("Seed Pokémon", NamedAPIResource("en", "")))
         )
-        PokemonAboutSection(detail = sampleDetail, species = sampleSpecies)
+        Surface(color = MaterialTheme.colorScheme.surface) { // Explicit Surface for preview context
+            PokemonAboutSection(detail = sampleDetail, species = sampleSpecies)
+        }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF) // Simulate white Surface BG
 @Composable
 fun PokemonBaseStatsSectionPreview() {
     PokedexTheme {
@@ -659,38 +679,26 @@ fun PokemonBaseStatsSectionPreview() {
             ),
             moves = emptyList()
         )
-        Surface(modifier = Modifier.padding(16.dp)) {
+        Surface(modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.surface) {
             PokemonBaseStatsSection(detail = sampleDetail)
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF) // Simulate white Surface BG
 @Composable
 fun PokemonMovesSectionPreview() {
     PokedexTheme {
         val sampleDetail = PokemonDetail(
             id = 1, name = "bulbasaur", height = 7, weight = 69,
-            abilities = emptyList(),
-            species = NamedAPIResource("", ""),
-            sprites = com.anuress.data.model.PokemonSprites(),
-            types = emptyList(),
-            stats = emptyList(),
+            abilities = emptyList(), species = NamedAPIResource("", ""),
+            sprites = com.anuress.data.model.PokemonSprites(), types = emptyList(), stats = emptyList(),
             moves = listOf(
                 PokemonMove("Tackle", "Level 1", 1),
-                PokemonMove("Growl", "Level 1", 1),
-                PokemonMove("Vine Whip", "Level 5", 5),
-                PokemonMove("Leech Seed", "Level 9", 9),
-                PokemonMove("Razor Leaf", "Machine (TM/TR)", null),
-                PokemonMove("Seed Bomb", "Egg Move", null),
-                PokemonMove ("Solar Beam", "Tutor", null),
-                PokemonMove("Sleep Powder", "Level 13", 13),
-                PokemonMove("Poison Powder", "Level 13", 13),
-                PokemonMove("Take Down", "Level 15", 15),
-                PokemonMove("Sweet Scent", "Level 20", 20)
+                PokemonMove("Growl", "Level 1", 1)
             )
         )
-        Surface(modifier = Modifier.padding(16.dp)) {
+        Surface(modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.surface) {
             PokemonMovesSection(detail = sampleDetail)
         }
     }
