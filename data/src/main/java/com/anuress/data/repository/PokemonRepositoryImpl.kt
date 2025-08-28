@@ -14,7 +14,8 @@ import com.anuress.data.model.OfficialArtworkSprite as DomainOfficialArtworkSpri
 import com.anuress.data.model.PokemonType as DomainPokemonType
 import com.anuress.data.model.PokemonStat as DomainPokemonStat
 import com.anuress.data.model.Genus as DomainGenus
-import com.anuress.data.model.NamedAPIResource as DomainNamedAPIResource // It's important this matches structure
+import com.anuress.data.model.NamedAPIResource as DomainNamedAPIResource
+import com.anuress.data.model.PokemonMove as DomainPokemonMove // <<< ADDED FOR MOVES
 
 // Import network service and models used for fetching
 import com.anuress.data.network.PokeApiService
@@ -29,11 +30,13 @@ import com.anuress.data.network.OfficialArtworkSprite as NetworkOfficialArtworkS
 import com.anuress.data.network.PokemonTypeEntry as NetworkPokemonTypeEntry
 import com.anuress.data.network.PokemonStatEntry as NetworkPokemonStatEntry
 import com.anuress.data.network.GenusEntry as NetworkGenusEntry
-import com.anuress.data.network.NamedAPIResource as NetworkNamedAPIResource // It's important this matches structure
+import com.anuress.data.network.NamedAPIResource as NetworkNamedAPIResource
+import com.anuress.data.network.PokemonMoveEntry as NetworkPokemonMoveEntry // <<< ADDED FOR MOVES
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.util.Locale // <<< ADDED FOR STRING FORMATTING
 
 class PokemonRepositoryImpl(
     private val pokeApiService: PokeApiService
@@ -53,9 +56,9 @@ class PokemonRepositoryImpl(
         return withContext(Dispatchers.IO) {
             runCatching {
                 val networkDetail = pokeApiService.getPokemonDetail(id)
-                networkDetail.toDomain() // Call the mapper
+                networkDetail.toDomain()
             }.onFailure {
-                // Optionally log the error: Log.e("PokemonRepository", "Failed to fetch/map detail", it)
+                // Optionally log the error
             }
         }
     }
@@ -64,9 +67,9 @@ class PokemonRepositoryImpl(
         return withContext(Dispatchers.IO) {
             runCatching {
                 val networkSpecies = pokeApiService.getPokemonSpecies(id)
-                networkSpecies.toDomain() // Call the mapper
+                networkSpecies.toDomain()
             }.onFailure {
-                // Optionally log the error: Log.e("PokemonRepository", "Failed to fetch/map species", it)
+                // Optionally log the error
             }
         }
     }
@@ -74,8 +77,6 @@ class PokemonRepositoryImpl(
 
 // --- Mapper Functions ---
 
-// Assumes NetworkNamedAPIResource and DomainNamedAPIResource are structurally identical
-// or a specific mapper would be needed if they differ. For now, direct use.
 private fun NetworkNamedAPIResource.toDomain(): DomainNamedAPIResource {
     return DomainNamedAPIResource(name = this.name, url = this.url)
 }
@@ -115,6 +116,64 @@ private fun NetworkPokemonStatEntry.toDomain(): DomainPokemonStat {
     )
 }
 
+// Mapper for Pokemon Moves
+private fun NetworkPokemonMoveEntry.toDomain(): DomainPokemonMove {
+    val formattedMoveName = this.move.name
+        .replace("-", " ")
+        .split(' ')
+        .joinToString(" ") { part -> part.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+
+    var description = "Unknown"
+    var finalLevelLearnedAt: Int? = null
+
+    // Prioritize level-up moves with the lowest positive level
+    val levelUpEntry = this.versionGroupDetails
+        .filter { it.moveLearnMethod.name == "level-up" && it.levelLearnedAt > 0 }
+        .minByOrNull { it.levelLearnedAt }
+
+    if (levelUpEntry != null) {
+        finalLevelLearnedAt = levelUpEntry.levelLearnedAt
+        description = "Level $finalLevelLearnedAt"
+    } else {
+        // If no positive level-up, check other methods
+        val methodPriority = listOf("machine", "egg", "tutor")
+        var foundOtherMethod = false
+        for (methodName in methodPriority) {
+            val entry = this.versionGroupDetails.firstOrNull { it.moveLearnMethod.name == methodName }
+            if (entry != null) {
+                description = when (methodName) {
+                    "machine" -> "Machine (TM/TR)"
+                    "egg" -> "Egg Move"
+                    "tutor" -> "Tutor"
+                    else -> methodName.replaceFirstChar { it.titlecase(Locale.getDefault()) } // Should not be reached here
+                }
+                foundOtherMethod = true
+                break
+            }
+        }
+
+        if (!foundOtherMethod) {
+            // Fallback for level 0 learn (start/evolution) or other unprioritized methods
+            val levelZeroEntry = this.versionGroupDetails.firstOrNull { it.moveLearnMethod.name == "level-up" && it.levelLearnedAt == 0 }
+            if (levelZeroEntry != null) {
+                description = "Start / Evolution"
+                finalLevelLearnedAt = 0 // Represent level 0
+            } else if (this.versionGroupDetails.isNotEmpty()) {
+                // Generic fallback to the first detail available
+                val firstDetail = this.versionGroupDetails.first()
+                description = firstDetail.moveLearnMethod.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            }
+            // If versionGroupDetails is empty, description remains "Unknown" and finalLevelLearnedAt remains null
+        }
+    }
+
+    return DomainPokemonMove(
+        name = formattedMoveName,
+        learnMethodDescription = description,
+        levelLearnedAt = finalLevelLearnedAt
+    )
+}
+
 private fun NetworkPokemonDetail.toDomain(): DomainPokemonDetail {
     return DomainPokemonDetail(
         id = this.id,
@@ -125,7 +184,12 @@ private fun NetworkPokemonDetail.toDomain(): DomainPokemonDetail {
         species = this.species.toDomain(),
         sprites = this.sprites.toDomain(),
         types = this.types.map { it.toDomain() },
-        stats = this.stats.map { it.toDomain() }
+        stats = this.stats.map { it.toDomain() },
+        moves = this.moves.map { it.toDomain() } // Map network moves to domain moves
+            .sortedWith(compareBy( // Sort the domain moves
+                { it.levelLearnedAt ?: Int.MAX_VALUE }, // Sort by level (nulls/non-level last)
+                { it.name } // Then by name
+            ))
     )
 }
 

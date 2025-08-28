@@ -21,7 +21,8 @@ data class PokemonDetail(
     val species: NamedAPIResource,
     val sprites: PokemonSprites,
     val types: List<PokemonType>,
-    val stats: List<PokemonStat> // <<< ADDED THIS LINE
+    val stats: List<PokemonStat>,
+    val moves: List<PokemonMove> // <<< ADDED THIS LINE
 )
 
 @Serializable
@@ -52,12 +53,19 @@ data class PokemonType(
     val type: NamedAPIResource
 )
 
-// <<< ADDED PokemonStat data class >>>
 @Serializable
 data class PokemonStat(
     val stat: NamedAPIResource,
     @SerialName("base_stat") val baseStat: Int,
     val effort: Int
+)
+
+// Added for Moves tab
+@Serializable
+data class PokemonMove(
+    val name: String,
+    val learnMethodDescription: String, // e.g., "Level 16", "TM", "Egg"
+    val levelLearnedAt: Int? // Useful for sorting, can be null if not level-up
 )
 
 // For the /pokemon-species/{id} endpoint

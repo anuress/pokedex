@@ -37,7 +37,8 @@ data class PokemonDetail(
     @SerialName("types") val types: List<PokemonTypeEntry>,
     @SerialName("stats") val stats: List<PokemonStatEntry>,
     @SerialName("abilities") val abilities: List<PokemonAbilityEntry>,
-    @SerialName("species") val species: NamedAPIResource // URL to fetch PokemonSpecies data
+    @SerialName("species") val species: NamedAPIResource, // URL to fetch PokemonSpecies data
+    @SerialName("moves") val moves: List<PokemonMoveEntry> // <<< ADDED THIS LINE
 )
 
 @Serializable
@@ -92,4 +93,18 @@ data class PokemonSpecies(
 data class GenusEntry(
     @SerialName("genus") val genus: String, // e.g., "Seed Pokémon"
     @SerialName("language") val language: NamedAPIResource // e.g., language.name == "en"
+)
+
+// Added for Moves tab
+@Serializable
+data class PokemonMoveEntry(
+    @SerialName("move") val move: NamedAPIResource,
+    @SerialName("version_group_details") val versionGroupDetails: List<VersionGroupDetail>
+)
+
+@Serializable
+data class VersionGroupDetail(
+    @SerialName("level_learned_at") val levelLearnedAt: Int,
+    @SerialName("move_learn_method") val moveLearnMethod: NamedAPIResource,
+    @SerialName("version_group") val versionGroup: NamedAPIResource // Provides context like game version
 )

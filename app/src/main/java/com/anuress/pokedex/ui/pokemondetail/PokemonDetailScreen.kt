@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn // <<< ADDED IMPORT
+import androidx.compose.foundation.lazy.items // <<< ADDED IMPORT
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -22,7 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator // Added import
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
@@ -39,9 +41,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip // Added import
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap // Added import
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,7 +56,8 @@ import com.anuress.data.model.NamedAPIResource
 import com.anuress.data.model.PokemonAbility
 import com.anuress.data.model.PokemonDetail
 import com.anuress.data.model.PokemonSpecies
-import com.anuress.data.model.PokemonStat // Added import
+import com.anuress.data.model.PokemonStat
+import com.anuress.data.model.PokemonMove // <<< ADDED IMPORT
 import com.anuress.pokedex.ui.theme.PokedexTheme
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
@@ -223,7 +226,7 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(top = 0.dp),
+            .padding(top = 0.dp), // Adjusted top padding
         contentAlignment = Alignment.TopCenter
     ) {
         when {
@@ -245,13 +248,18 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                    // Remove .verticalScroll(rememberScrollState()) from here if LazyColumn in Moves tab is used
                 ) {
                     // Top Section: Image, Name, ID, Types
+                    // This Column can be made scrollable if its content exceeds screen,
+                    // or kept fixed if the tab content itself is the primary scroll area.
+                    // For now, let's assume the top section is not independently scrollable
+                    // when a LazyColumn is used in one of the tabs.
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState()), // Make top part scrollable if content overflows
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         AsyncImage(
@@ -290,6 +298,7 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                         Spacer(modifier = Modifier.height(24.dp))
                     }
 
+
                     // TabRow Section
                     PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
                         tabTitles.forEachIndexed { index, title ->
@@ -302,12 +311,15 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                     }
 
                     // Tab Content Section
-                    Box(modifier = Modifier.padding(16.dp)) {
+                    // The Box now fills the remaining space after the TabRow.
+                    // If a tab content (like Moves) uses LazyColumn, it will handle its own scrolling.
+                    // Other tabs might need .verticalScroll() if their content is large.
+                    Box(modifier = Modifier.weight(1f).padding(16.dp)) {
                         when (selectedTabIndex) {
-                            0 -> PokemonAboutSection(detail = detail, species = species)
-                            1 -> PokemonBaseStatsSection(detail = detail) // Updated
+                            0 -> PokemonAboutSection(detail = detail, species = species) // This needs scroll if content is large
+                            1 -> PokemonBaseStatsSection(detail = detail) // This needs scroll if content is large
                             2 -> Text("Evolution Content - Coming Soon!", style = MaterialTheme.typography.bodyLarge)
-                            3 -> Text("Moves Content - Coming Soon!", style = MaterialTheme.typography.bodyLarge)
+                            3 -> PokemonMovesSection(detail = detail) // <<< UPDATED FOR MOVES TAB
                         }
                     }
                 }
@@ -325,7 +337,7 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
 @Composable
 fun PokemonAboutSection(detail: PokemonDetail, species: PokemonSpecies) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), // Added scroll for potentially long content
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         AboutDetailItem(label = "Species", value = species.genera.firstOrNull { it.language.name == "en" }?.genus ?: "Unknown")
@@ -366,7 +378,7 @@ fun AboutDetailItem(label: String, value: String) {
 @Composable
 fun PokemonBaseStatsSection(detail: PokemonDetail) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), // Added scroll for potentially long content
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         detail.stats.forEach { statEntry ->
@@ -407,6 +419,49 @@ fun StatRow(stat: PokemonStat) {
             color = statColor,
             trackColor = statColor.copy(alpha = 0.3f), // Lighter track color
             strokeCap = StrokeCap.Round // Rounded caps for the progress bar
+        )
+    }
+}
+
+// --- MOVES SECTION ---
+@Composable
+fun PokemonMovesSection(detail: PokemonDetail, modifier: Modifier = Modifier) {
+    if (detail.moves.isEmpty()) {
+        Text(
+            text = "No moves information available for this Pokémon.",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = modifier.padding(16.dp).fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+        return
+    }
+
+    LazyColumn(modifier = modifier.fillMaxSize()) {
+        items(detail.moves) { move ->
+            MoveRow(move = move)
+            HorizontalDivider()
+        }
+    }
+}
+
+@Composable
+fun MoveRow(move: PokemonMove) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = move.name,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = move.learnMethodDescription,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -458,6 +513,13 @@ fun PokemonDetailScreenDataPreview() {
                         PokemonStat(NamedAPIResource("special-attack", ""), 65, 0),
                         PokemonStat(NamedAPIResource("special-defense", ""), 65, 0),
                         PokemonStat(NamedAPIResource("speed", ""), 45, 0)
+                    ),
+                    moves = listOf( // <<< ADDED SAMPLE MOVES FOR PREVIEW
+                        PokemonMove("Tackle", "Level 1", 1),
+                        PokemonMove("Growl", "Level 1", 1),
+                        PokemonMove("Vine Whip", "Level 5", 5),
+                        PokemonMove("Razor Leaf", "Machine (TM/TR)", null),
+                        PokemonMove("Seed Bomb", "Egg Move", null)
                     )
                 ),
                 pokemonSpecies = PokemonSpecies(
@@ -503,7 +565,8 @@ fun PokemonAboutSectionPreview() {
             species = NamedAPIResource("",""),
             sprites = com.anuress.data.model.PokemonSprites(),
             types = emptyList(),
-            stats = emptyList() // <<< ADDED THIS LINE
+            stats = emptyList(),
+            moves = emptyList() // Added empty moves for About preview
         )
         val sampleSpecies = PokemonSpecies(
             id = 1, name = "bulbasaur", genderRate = 1, hatchCounter = 20,
@@ -529,10 +592,43 @@ fun PokemonBaseStatsSectionPreview() {
                 PokemonStat(NamedAPIResource("special-attack", ""), 65, 0),
                 PokemonStat(NamedAPIResource("special-defense", ""), 65, 0),
                 PokemonStat(NamedAPIResource("speed", ""), 45, 0)
+            ),
+            moves = emptyList() // Added empty moves for BaseStats preview
+        )
+        Surface(modifier = Modifier.padding(16.dp)) {
+            PokemonBaseStatsSection(detail = sampleDetail)
+        }
+    }
+}
+
+// <<< ADDED PREVIEW FOR MOVES SECTION >>>
+@Preview(showBackground = true)
+@Composable
+fun PokemonMovesSectionPreview() {
+    PokedexTheme {
+        val sampleDetail = PokemonDetail(
+            id = 1, name = "bulbasaur", height = 7, weight = 69,
+            abilities = emptyList(),
+            species = NamedAPIResource("", ""),
+            sprites = com.anuress.data.model.PokemonSprites(),
+            types = emptyList(),
+            stats = emptyList(),
+            moves = listOf(
+                PokemonMove("Tackle", "Level 1", 1),
+                PokemonMove("Growl", "Level 1", 1),
+                PokemonMove("Vine Whip", "Level 5", 5),
+                PokemonMove("Leech Seed", "Level 9", 9),
+                PokemonMove("Razor Leaf", "Machine (TM/TR)", null),
+                PokemonMove("Seed Bomb", "Egg Move", null),
+                PokemonMove("Solar Beam", "Tutor", null),
+                PokemonMove("Sleep Powder", "Level 13", 13),
+                PokemonMove("Poison Powder", "Level 13", 13),
+                PokemonMove("Take Down", "Level 15", 15),
+                PokemonMove("Sweet Scent", "Level 20", 20)
             )
         )
-        Surface(modifier = Modifier.padding(16.dp)) { // Added Surface for better preview
-            PokemonBaseStatsSection(detail = sampleDetail)
+        Surface(modifier = Modifier.padding(16.dp)) {
+            PokemonMovesSection(detail = sampleDetail)
         }
     }
 }
