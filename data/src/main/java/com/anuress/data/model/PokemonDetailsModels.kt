@@ -15,14 +15,14 @@ data class NamedAPIResource(
 data class PokemonDetail(
     val id: Int,
     val name: String,
-    val height: Int, // In decimetres
-    val weight: Int, // In hectograms
+    val height: Int,
+    val weight: Int,
     val abilities: List<PokemonAbility>,
     val species: NamedAPIResource,
     val sprites: PokemonSprites,
     val types: List<PokemonType>,
     val stats: List<PokemonStat>,
-    val moves: List<PokemonMove> // <<< ADDED THIS LINE
+    val moves: List<PokemonMove>
 )
 
 @Serializable
@@ -60,7 +60,6 @@ data class PokemonStat(
     val effort: Int
 )
 
-// Added for Moves tab
 @Serializable
 data class PokemonMove(
     val name: String,

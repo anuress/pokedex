@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn // <<< ADDED IMPORT
-import androidx.compose.foundation.lazy.items // <<< ADDED IMPORT
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -57,13 +57,13 @@ import com.anuress.data.model.PokemonAbility
 import com.anuress.data.model.PokemonDetail
 import com.anuress.data.model.PokemonSpecies
 import com.anuress.data.model.PokemonStat
-import com.anuress.data.model.PokemonMove // <<< ADDED IMPORT
+import com.anuress.data.model.PokemonMove
 import com.anuress.pokedex.ui.theme.PokedexTheme
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
 import kotlin.math.roundToInt
 
-// --- Helper Functions for Formatting (existing) ---
+// --- Helper Functions for Formatting ---
 private fun formatHeight(decimetres: Int): String {
     val meters = decimetres / 10.0
     val feet = meters * 3.28084
@@ -118,23 +118,22 @@ private fun formatStatName(statName: String): String {
     }
 }
 
-// Max stat value for normalization (adjust if needed, some HP can go higher)
+// Max stat value for normalization
 private const val MAX_STAT_VALUE = 255f
 
 private fun getStatColor(statName: String): Color {
     return when (statName.lowercase(Locale.getDefault())) {
-        "hp" -> Color(0xFFDF2140) // Red
-        "attack" -> Color(0xFFF79F37) // Orange
-        "defense" -> Color(0xFFF3D23D) // Yellow
-        "special-attack" -> Color(0xFF5D7BF1) // Blue
-        "special-defense" -> Color(0xFF6EDDD0) // Teal
-        "speed" -> Color(0xFFEF5682) // Pink
+        "hp" -> Color(0xFFDF2140)
+        "attack" -> Color(0xFFF79F37)
+        "defense" -> Color(0xFFF3D23D)
+        "special-attack" -> Color(0xFF5D7BF1)
+        "special-defense" -> Color(0xFF6EDDD0)
+        "speed" -> Color(0xFFEF5682)
         else -> Color.Gray
     }
 }
 
-
-// Helper function to get a color for a Pokémon type (simplified)
+// Helper function to get a color for a Pokémon type
 fun getTypeColor(typeName: String): Color {
     return when (typeName.lowercase(Locale.getDefault())) {
         "grass" -> Color(0xFF78C850)
@@ -177,7 +176,7 @@ fun PokemonDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { /* Title removed */ },
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -217,7 +216,7 @@ fun PokemonTypeChip(typeName: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class) // For PrimaryTabRow
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modifier = Modifier) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -226,7 +225,7 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(top = 0.dp), // Adjusted top padding
+            .padding(top = 0.dp),
         contentAlignment = Alignment.TopCenter
     ) {
         when {
@@ -246,15 +245,9 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                 val species = uiState.pokemonSpecies!!
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                    // Remove .verticalScroll(rememberScrollState()) from here if LazyColumn in Moves tab is used
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     // Top Section: Image, Name, ID, Types
-                    // This Column can be made scrollable if its content exceeds screen,
-                    // or kept fixed if the tab content itself is the primary scroll area.
-                    // For now, let's assume the top section is not independently scrollable
-                    // when a LazyColumn is used in one of the tabs.
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -298,8 +291,6 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                         Spacer(modifier = Modifier.height(24.dp))
                     }
 
-
-                    // TabRow Section
                     PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
                         tabTitles.forEachIndexed { index, title ->
                             Tab(
@@ -310,16 +301,12 @@ fun PokemonDetailScreenContent(uiState: PokemonDetailScreenState, modifier: Modi
                         }
                     }
 
-                    // Tab Content Section
-                    // The Box now fills the remaining space after the TabRow.
-                    // If a tab content (like Moves) uses LazyColumn, it will handle its own scrolling.
-                    // Other tabs might need .verticalScroll() if their content is large.
                     Box(modifier = Modifier.weight(1f).padding(16.dp)) {
                         when (selectedTabIndex) {
                             0 -> PokemonAboutSection(detail = detail, species = species) // This needs scroll if content is large
                             1 -> PokemonBaseStatsSection(detail = detail) // This needs scroll if content is large
                             2 -> Text("Evolution Content - Coming Soon!", style = MaterialTheme.typography.bodyLarge)
-                            3 -> PokemonMovesSection(detail = detail) // <<< UPDATED FOR MOVES TAB
+                            3 -> PokemonMovesSection(detail = detail)
                         }
                     }
                 }
@@ -484,7 +471,6 @@ fun PokemonDetailScreenDataPreview() {
     PokedexTheme {
         // To see Base Stats in preview, set selectedTabIndex = 1
         // For now, PokemonDetailScreenContent preview will show "About" by default.
-        // Use the PokemonBaseStatsSectionPreview below to see the stats.
         PokemonDetailScreenContent(
             uiState = PokemonDetailScreenState(
                 isLoading = false,
@@ -506,7 +492,7 @@ fun PokemonDetailScreenDataPreview() {
                         com.anuress.data.model.PokemonType(1, NamedAPIResource("grass", "")),
                         com.anuress.data.model.PokemonType(2, NamedAPIResource("poison", ""))
                     ),
-                    stats = listOf( // Added sample stats
+                    stats = listOf(
                         PokemonStat(NamedAPIResource("hp", ""), 45, 0),
                         PokemonStat(NamedAPIResource("attack", ""), 49, 0),
                         PokemonStat(NamedAPIResource("defense", ""), 49, 0),
@@ -514,7 +500,7 @@ fun PokemonDetailScreenDataPreview() {
                         PokemonStat(NamedAPIResource("special-defense", ""), 65, 0),
                         PokemonStat(NamedAPIResource("speed", ""), 45, 0)
                     ),
-                    moves = listOf( // <<< ADDED SAMPLE MOVES FOR PREVIEW
+                    moves = listOf(
                         PokemonMove("Tackle", "Level 1", 1),
                         PokemonMove("Growl", "Level 1", 1),
                         PokemonMove("Vine Whip", "Level 5", 5),
@@ -566,7 +552,7 @@ fun PokemonAboutSectionPreview() {
             sprites = com.anuress.data.model.PokemonSprites(),
             types = emptyList(),
             stats = emptyList(),
-            moves = emptyList() // Added empty moves for About preview
+            moves = emptyList()
         )
         val sampleSpecies = PokemonSpecies(
             id = 1, name = "bulbasaur", genderRate = 1, hatchCounter = 20,
@@ -593,7 +579,7 @@ fun PokemonBaseStatsSectionPreview() {
                 PokemonStat(NamedAPIResource("special-defense", ""), 65, 0),
                 PokemonStat(NamedAPIResource("speed", ""), 45, 0)
             ),
-            moves = emptyList() // Added empty moves for BaseStats preview
+            moves = emptyList()
         )
         Surface(modifier = Modifier.padding(16.dp)) {
             PokemonBaseStatsSection(detail = sampleDetail)
@@ -601,7 +587,6 @@ fun PokemonBaseStatsSectionPreview() {
     }
 }
 
-// <<< ADDED PREVIEW FOR MOVES SECTION >>>
 @Preview(showBackground = true)
 @Composable
 fun PokemonMovesSectionPreview() {

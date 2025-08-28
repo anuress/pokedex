@@ -18,8 +18,6 @@ data class PokemonListItem(
     @SerialName("url") val url: String
 )
 
-// Added data classes below
-
 @Serializable
 data class NamedAPIResource(
     @SerialName("name") val name: String,
@@ -28,11 +26,11 @@ data class NamedAPIResource(
 
 // For Pokemon Detail Endpoint
 @Serializable
-data class PokemonDetailResponse( // <<< RENAMED
+data class PokemonDetailResponse(
     @SerialName("id") val id: Int,
     @SerialName("name") val name: String,
-    @SerialName("height") val height: Int, // In decimetres
-    @SerialName("weight") val weight: Int, // In hectograms
+    @SerialName("height") val height: Int,
+    @SerialName("weight") val weight: Int,
     @SerialName("sprites") val sprites: PokemonSprites,
     @SerialName("types") val types: List<PokemonTypeEntry>,
     @SerialName("stats") val stats: List<PokemonStatEntry>,
@@ -44,7 +42,6 @@ data class PokemonDetailResponse( // <<< RENAMED
 @Serializable
 data class PokemonSprites(
     @SerialName("other") val other: OtherSprites?
-    // You can add more sprite categories here if needed, e.g., front_default directly
 )
 
 @Serializable
@@ -79,14 +76,13 @@ data class PokemonAbilityEntry(
 
 // For Pokemon Species Endpoint
 @Serializable
-data class PokemonSpeciesResponse( // <<< RENAMED
+data class PokemonSpeciesResponse(
     @SerialName("id") val id: Int,
     @SerialName("name") val name: String,
     @SerialName("gender_rate") val genderRate: Int, // Chance of being female in eigths (e.g. 1 means 1/8 = 12.5%). -1 for genderless.
     @SerialName("hatch_counter") val hatchCounter: Int?, // Number of cycles for hatching an egg
     @SerialName("egg_groups") val eggGroups: List<NamedAPIResource>,
     @SerialName("genera") val genera: List<GenusEntry> // Name in different languages
-    // Add other fields like flavor_text_entries, evolution_chain if needed later
 )
 
 @Serializable
@@ -95,7 +91,6 @@ data class GenusEntry(
     @SerialName("language") val language: NamedAPIResource // e.g., language.name == "en"
 )
 
-// Added for Moves tab
 @Serializable
 data class PokemonMoveEntry(
     @SerialName("move") val move: NamedAPIResource,
