@@ -4,13 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.anuress.pokedex.ui.pokemondetail.PokemonDetailScreen
 import com.anuress.pokedex.ui.theme.PokedexTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,23 +20,39 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PokedexScreen()
+            PokedexApp() // Changed to a new root composable for clarity
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
+fun PokedexApp() {
+    PokedexTheme {
+        val navController: NavHostController = rememberNavController()
+        NavHost(
+            navController = navController,
+            startDestination = PokedexDestinations.POKEDEX_LIST_ROUTE
+        ) {
+            composable(PokedexDestinations.POKEDEX_LIST_ROUTE) {
+                // Pass navController to PokedexScreen so it can navigate
+                PokedexScreen(navController = navController)
+            }
+            composable(
+                route = PokedexDestinations.POKEMON_DETAIL_ROUTE_WITH_ARG,
+                arguments = listOf(navArgument(PokedexDestinations.POKEMON_ID_ARG) {
+                    type = NavType.IntType
+                })
+            ) { // backStackEntry ->
+                // PokemonDetailViewModel will get the pokemonId from SavedStateHandle
+                // Pass navController for potential back navigation from detail screen
+                PokemonDetailScreen(navController = navController)
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
-    PokedexTheme {
-        Greeting("Android")
-    }
+fun DefaultPreview() { // Renamed GreetingPreview to DefaultPreview or AppPreview
+    PokedexApp() // Preview the whole app with navigation
 }

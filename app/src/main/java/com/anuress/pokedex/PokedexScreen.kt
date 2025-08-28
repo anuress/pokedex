@@ -1,9 +1,11 @@
 package com.anuress.pokedex
 
+import androidx.compose.foundation.clickable // Added import
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+// import androidx.compose.foundation.lazy.grid.items // Using foundation items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,17 +17,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.navigation.NavHostController // Added import
 import androidx.palette.graphics.Palette
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.anuress.data.model.Pokemon // Assuming this path is correct after module move
+import com.anuress.data.model.Pokemon
 import com.anuress.pokedex.ui.pokedex.PokedexViewModel
 import com.anuress.pokedex.ui.theme.PokedexTheme
 import org.koin.androidx.compose.koinViewModel
-import java.util.Locale // Added for titlecase
+import java.util.Locale
 
 fun getTextColorForBackground(backgroundColor: Color): Color {
     val luminance = (0.299 * backgroundColor.red + 0.587 * backgroundColor.green + 0.114 * backgroundColor.blue)
@@ -33,16 +36,21 @@ fun getTextColorForBackground(backgroundColor: Color): Color {
 }
 
 @Composable
-fun PokemonCard(pokemon: Pokemon, modifier: Modifier = Modifier) {
+fun PokemonCard(
+    pokemon: Pokemon,
+    modifier: Modifier = Modifier,
+    onPokemonClick: (Pokemon) -> Unit // Added callback for click
+) {
     var cardColor by remember { mutableStateOf(Color.LightGray) }
     val textColor = getTextColorForBackground(cardColor)
     val context = LocalContext.current
 
     Card(
         modifier = modifier
-            .width(160.dp) // Card width can remain the same or be adjusted
-            .height(200.dp) // Increased height to accommodate larger image
-            .padding(4.dp),
+            .width(160.dp)
+            .height(200.dp)
+            .padding(4.dp)
+            .clickable { onPokemonClick(pokemon) }, // Made card clickable
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
@@ -68,13 +76,13 @@ fun PokemonCard(pokemon: Pokemon, modifier: Modifier = Modifier) {
                     .build(),
                 contentDescription = pokemon.name,
                 modifier = Modifier
-                    .size(120.dp) // Increased image size
+                    .size(120.dp)
                     .padding(bottom = 12.dp)
             )
             Text(
                 text = pokemon.name.replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-                }, // Capitalized name
+                },
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = textColor
@@ -87,7 +95,8 @@ fun PokemonCard(pokemon: Pokemon, modifier: Modifier = Modifier) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PokedexScreen(
-    viewModel: PokedexViewModel = koinViewModel() // Inject ViewModel
+    navController: NavHostController, // Added NavController parameter
+    viewModel: PokedexViewModel = koinViewModel()
 ) {
     val pokemonPagingItems: LazyPagingItems<Pokemon> = viewModel.pokemonPagingFlow.collectAsLazyPagingItems()
 
@@ -101,11 +110,9 @@ fun PokedexScreen(
             }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                // Handle initial loading state
                 if (pokemonPagingItems.loadState.refresh is LoadState.Loading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                // Handle error state for initial load
                 else if (pokemonPagingItems.loadState.refresh is LoadState.Error) {
                     val error = pokemonPagingItems.loadState.refresh as LoadState.Error
                     Text(
@@ -124,13 +131,19 @@ fun PokedexScreen(
                         items(pokemonPagingItems.itemCount) { index ->
                             val pokemon = pokemonPagingItems[index]
                             if (pokemon != null) {
-                                PokemonCard(pokemon = pokemon)
+                                PokemonCard(
+                                    pokemon = pokemon,
+                                    onPokemonClick = { selectedPokemon ->
+                                        navController.navigate(
+                                            "${PokedexDestinations.POKEMON_DETAIL_ROUTE_BASE}/${selectedPokemon.id}"
+                                        )
+                                    }
+                                )
                             }
                         }
 
-                        // Handle loading state for appending more items
                         if (pokemonPagingItems.loadState.append is LoadState.Loading) {
-                            item(span = { GridItemSpan(maxLineSpan) }) { // Corrected span
+                            item(span = { GridItemSpan(maxLineSpan) }) {
                                 CircularProgressIndicator(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -139,9 +152,8 @@ fun PokedexScreen(
                                 )
                             }
                         }
-                        // Handle error state for appending more items
                         if (pokemonPagingItems.loadState.append is LoadState.Error) {
-                             item(span = { GridItemSpan(maxLineSpan) }) { // Corrected span
+                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 val error = pokemonPagingItems.loadState.append as LoadState.Error
                                 Text(
                                     text = "Error loading more: ${error.error.localizedMessage}",
@@ -161,15 +173,17 @@ fun PokedexScreen(
 @Composable
 fun PokemonCardPreview() {
     PokedexTheme {
-        // Updated to use the Pokemon from data.model with explicit data
-        PokemonCard(pokemon = Pokemon(1, "Bulbasaur", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png"))
+        PokemonCard(
+            pokemon = Pokemon(1, "Bulbasaur", "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png"),
+            onPokemonClick = {} // Pass empty lambda for preview
+        )
     }
 }
 
-// PokedexScreenPreview might be complex to set up with a fake PagingData flow.
-// For now, it's removed. If needed, a more elaborate preview with fake data source can be created.
+// PokedexScreenPreview would need a NavController, e.g., rememberNavController()
 // @Preview(showBackground = true, widthDp = 380, heightDp = 760)
 // @Composable
 // fun PokedexScreenPreview() {
-//    PokedexScreen() // This would require a Koin context or a fake ViewModel
+//    val navController = rememberNavController() // Example for preview
+//    PokedexScreen(navController = navController)
 // }

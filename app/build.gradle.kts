@@ -56,6 +56,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.palette.ktx)
 
+    // Jetpack Navigation
+    implementation(libs.androidx.navigation.compose) // Added Navigation Compose
+
     // Koin Dependencies (needed for UI layer and Application class)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)

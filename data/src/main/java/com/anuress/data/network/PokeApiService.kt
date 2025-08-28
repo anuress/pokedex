@@ -1,6 +1,11 @@
 package com.anuress.data.network
 
+// Domain model imports removed:
+// import com.anuress.data.model.PokemonDetail
+// import com.anuress.data.model.PokemonSpecies
+
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface PokeApiService {
@@ -13,5 +18,15 @@ interface PokeApiService {
     suspend fun getPokemonList(
         @Query("limit") limit: Int,
         @Query("offset") offset: Int
-    ): PokemonListResponse // This will now refer to the class in PokemonApiModels.kt
+    ): PokemonListResponse // com.anuress.data.network.PokemonListResponse
+
+    @GET("pokemon/{id}")
+    suspend fun getPokemonDetail(
+        @Path("id") id: Int
+    ): PokemonDetail // Now resolves to com.anuress.data.network.PokemonDetail
+
+    @GET("pokemon-species/{id}")
+    suspend fun getPokemonSpecies(
+        @Path("id") id: Int
+    ): PokemonSpecies // Now resolves to com.anuress.data.network.PokemonSpecies
 }
