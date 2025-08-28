@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    // Removed: alias(libs.plugins.kotlin.serialization) // Moved to :data module
 }
 
 android {
@@ -42,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":data")) // Added dependency on the :data module
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -51,7 +53,16 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.coil.compose) // Updated to use libs.versions.toml alias
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.palette.ktx)
+
+    // Koin Dependencies (needed for UI layer and Application class)
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+
+    // Jetpack Paging Compose (for UI integration)
+    implementation(libs.androidx.paging.compose)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
