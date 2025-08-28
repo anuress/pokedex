@@ -28,7 +28,7 @@ data class NamedAPIResource(
 
 // For Pokemon Detail Endpoint
 @Serializable
-data class PokemonDetail(
+data class PokemonDetailResponse( // <<< RENAMED
     @SerialName("id") val id: Int,
     @SerialName("name") val name: String,
     @SerialName("height") val height: Int, // In decimetres
@@ -38,7 +38,7 @@ data class PokemonDetail(
     @SerialName("stats") val stats: List<PokemonStatEntry>,
     @SerialName("abilities") val abilities: List<PokemonAbilityEntry>,
     @SerialName("species") val species: NamedAPIResource, // URL to fetch PokemonSpecies data
-    @SerialName("moves") val moves: List<PokemonMoveEntry> // <<< ADDED THIS LINE
+    @SerialName("moves") val moves: List<PokemonMoveEntry>
 )
 
 @Serializable
@@ -79,7 +79,7 @@ data class PokemonAbilityEntry(
 
 // For Pokemon Species Endpoint
 @Serializable
-data class PokemonSpecies(
+data class PokemonSpeciesResponse( // <<< RENAMED
     @SerialName("id") val id: Int,
     @SerialName("name") val name: String,
     @SerialName("gender_rate") val genderRate: Int, // Chance of being female in eigths (e.g. 1 means 1/8 = 12.5%). -1 for genderless.

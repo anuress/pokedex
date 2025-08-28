@@ -23,10 +23,10 @@ interface PokeApiService {
     @GET("pokemon/{id}")
     suspend fun getPokemonDetail(
         @Path("id") id: Int
-    ): PokemonDetail // Now resolves to com.anuress.data.network.PokemonDetail
+    ): PokemonDetailResponse // <<< UPDATED
 
     @GET("pokemon-species/{id}")
     suspend fun getPokemonSpecies(
         @Path("id") id: Int
-    ): PokemonSpecies // Now resolves to com.anuress.data.network.PokemonSpecies
+    ): PokemonSpeciesResponse // <<< UPDATED
 }

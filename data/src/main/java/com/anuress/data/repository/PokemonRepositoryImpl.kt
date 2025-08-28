@@ -4,7 +4,8 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.anuress.data.model.Pokemon // Domain model for list item
-// Import domain models that will be returned by the repository
+
+// Domain models (aliased with "Domain" prefix)
 import com.anuress.data.model.PokemonDetail as DomainPokemonDetail
 import com.anuress.data.model.PokemonSpecies as DomainPokemonSpecies
 import com.anuress.data.model.PokemonAbility as DomainPokemonAbility
@@ -15,28 +16,30 @@ import com.anuress.data.model.PokemonType as DomainPokemonType
 import com.anuress.data.model.PokemonStat as DomainPokemonStat
 import com.anuress.data.model.Genus as DomainGenus
 import com.anuress.data.model.NamedAPIResource as DomainNamedAPIResource
-import com.anuress.data.model.PokemonMove as DomainPokemonMove // <<< ADDED FOR MOVES
+import com.anuress.data.model.PokemonMove as DomainPokemonMove
 
-// Import network service and models used for fetching
+// Network service and models
 import com.anuress.data.network.PokeApiService
 import com.anuress.data.network.POKEMON_PAGE_SIZE
 import com.anuress.data.network.PokemonPagingSource
-import com.anuress.data.network.PokemonDetail as NetworkPokemonDetail
-import com.anuress.data.network.PokemonSpecies as NetworkPokemonSpecies
-import com.anuress.data.network.PokemonAbilityEntry as NetworkPokemonAbilityEntry
-import com.anuress.data.network.PokemonSprites as NetworkPokemonSprites
-import com.anuress.data.network.OtherSprites as NetworkOtherSprites
-import com.anuress.data.network.OfficialArtworkSprite as NetworkOfficialArtworkSprite
-import com.anuress.data.network.PokemonTypeEntry as NetworkPokemonTypeEntry
-import com.anuress.data.network.PokemonStatEntry as NetworkPokemonStatEntry
-import com.anuress.data.network.GenusEntry as NetworkGenusEntry
-import com.anuress.data.network.NamedAPIResource as NetworkNamedAPIResource
-import com.anuress.data.network.PokemonMoveEntry as NetworkPokemonMoveEntry // <<< ADDED FOR MOVES
+// Network models - primary responses aliased to their name without "Response" suffix
+import com.anuress.data.network.PokemonDetailResponse as PokemonDetail
+import com.anuress.data.network.PokemonSpeciesResponse as PokemonSpecies
+// Other network models - imported directly
+import com.anuress.data.network.PokemonAbilityEntry
+import com.anuress.data.network.PokemonSprites
+import com.anuress.data.network.OtherSprites
+import com.anuress.data.network.OfficialArtworkSprite
+import com.anuress.data.network.PokemonTypeEntry
+import com.anuress.data.network.PokemonStatEntry
+import com.anuress.data.network.GenusEntry
+import com.anuress.data.network.NamedAPIResource // Network version, domain is DomainNamedAPIResource
+import com.anuress.data.network.PokemonMoveEntry
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import java.util.Locale // <<< ADDED FOR STRING FORMATTING
+import java.util.Locale
 
 class PokemonRepositoryImpl(
     private val pokeApiService: PokeApiService
@@ -55,8 +58,8 @@ class PokemonRepositoryImpl(
     override suspend fun getPokemonDetail(id: Int): Result<DomainPokemonDetail> {
         return withContext(Dispatchers.IO) {
             runCatching {
-                val networkDetail = pokeApiService.getPokemonDetail(id)
-                networkDetail.toDomain()
+                val pokemonDetailResponse = pokeApiService.getPokemonDetail(id) // Type is PokemonDetailResponse
+                pokemonDetailResponse.toDomain() // Uses new alias PokemonDetail in toDomain()
             }.onFailure {
                 // Optionally log the error
             }
@@ -66,8 +69,8 @@ class PokemonRepositoryImpl(
     override suspend fun getPokemonSpecies(id: Int): Result<DomainPokemonSpecies> {
         return withContext(Dispatchers.IO) {
             runCatching {
-                val networkSpecies = pokeApiService.getPokemonSpecies(id)
-                networkSpecies.toDomain()
+                val pokemonSpeciesResponse = pokeApiService.getPokemonSpecies(id) // Type is PokemonSpeciesResponse
+                pokemonSpeciesResponse.toDomain() // Uses new alias PokemonSpecies in toDomain()
             }.onFailure {
                 // Optionally log the error
             }
@@ -77,48 +80,48 @@ class PokemonRepositoryImpl(
 
 // --- Mapper Functions ---
 
-private fun NetworkNamedAPIResource.toDomain(): DomainNamedAPIResource {
+// Receiver type is now the direct/aliased network type
+private fun NamedAPIResource.toDomain(): DomainNamedAPIResource {
     return DomainNamedAPIResource(name = this.name, url = this.url)
 }
 
-private fun NetworkPokemonAbilityEntry.toDomain(): DomainPokemonAbility {
+private fun PokemonAbilityEntry.toDomain(): DomainPokemonAbility {
     return DomainPokemonAbility(
-        ability = this.ability.toDomain(),
+        ability = this.ability.toDomain(), // this.ability is NamedAPIResource (network)
         isHidden = this.isHidden,
         slot = this.slot
     )
 }
 
-private fun NetworkOfficialArtworkSprite.toDomain(): DomainOfficialArtworkSprite {
+private fun OfficialArtworkSprite.toDomain(): DomainOfficialArtworkSprite {
     return DomainOfficialArtworkSprite(frontDefault = this.frontDefault)
 }
 
-private fun NetworkOtherSprites.toDomain(): DomainOtherSprites {
+private fun OtherSprites.toDomain(): DomainOtherSprites {
     return DomainOtherSprites(officialArtwork = this.officialArtwork?.toDomain())
 }
 
-private fun NetworkPokemonSprites.toDomain(): DomainPokemonSprites {
+private fun PokemonSprites.toDomain(): DomainPokemonSprites {
     return DomainPokemonSprites(other = this.other?.toDomain())
 }
 
-private fun NetworkPokemonTypeEntry.toDomain(): DomainPokemonType {
+private fun PokemonTypeEntry.toDomain(): DomainPokemonType {
     return DomainPokemonType(
         slot = this.slot,
-        type = this.type.toDomain()
+        type = this.type.toDomain() // this.type is NamedAPIResource (network)
     )
 }
 
-private fun NetworkPokemonStatEntry.toDomain(): DomainPokemonStat {
+private fun PokemonStatEntry.toDomain(): DomainPokemonStat {
     return DomainPokemonStat(
-        stat = this.stat.toDomain(),
+        stat = this.stat.toDomain(), // this.stat is NamedAPIResource (network)
         baseStat = this.baseStat,
         effort = this.effort
     )
 }
 
-// Mapper for Pokemon Moves
-private fun NetworkPokemonMoveEntry.toDomain(): DomainPokemonMove {
-    val formattedMoveName = this.move.name
+private fun PokemonMoveEntry.toDomain(): DomainPokemonMove {
+    val formattedMoveName = this.move.name // this.move is NamedAPIResource (network)
         .replace("-", " ")
         .split(' ')
         .joinToString(" ") { part -> part.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
@@ -126,7 +129,6 @@ private fun NetworkPokemonMoveEntry.toDomain(): DomainPokemonMove {
     var description = "Unknown"
     var finalLevelLearnedAt: Int? = null
 
-    // Prioritize level-up moves with the lowest positive level
     val levelUpEntry = this.versionGroupDetails
         .filter { it.moveLearnMethod.name == "level-up" && it.levelLearnedAt > 0 }
         .minByOrNull { it.levelLearnedAt }
@@ -135,7 +137,6 @@ private fun NetworkPokemonMoveEntry.toDomain(): DomainPokemonMove {
         finalLevelLearnedAt = levelUpEntry.levelLearnedAt
         description = "Level $finalLevelLearnedAt"
     } else {
-        // If no positive level-up, check other methods
         val methodPriority = listOf("machine", "egg", "tutor")
         var foundOtherMethod = false
         for (methodName in methodPriority) {
@@ -145,25 +146,21 @@ private fun NetworkPokemonMoveEntry.toDomain(): DomainPokemonMove {
                     "machine" -> "Machine (TM/TR)"
                     "egg" -> "Egg Move"
                     "tutor" -> "Tutor"
-                    else -> methodName.replaceFirstChar { it.titlecase(Locale.getDefault()) } // Should not be reached here
+                    else -> methodName.replaceFirstChar { it.titlecase(Locale.getDefault()) }
                 }
                 foundOtherMethod = true
                 break
             }
         }
-
         if (!foundOtherMethod) {
-            // Fallback for level 0 learn (start/evolution) or other unprioritized methods
             val levelZeroEntry = this.versionGroupDetails.firstOrNull { it.moveLearnMethod.name == "level-up" && it.levelLearnedAt == 0 }
             if (levelZeroEntry != null) {
                 description = "Start / Evolution"
-                finalLevelLearnedAt = 0 // Represent level 0
+                finalLevelLearnedAt = 0
             } else if (this.versionGroupDetails.isNotEmpty()) {
-                // Generic fallback to the first detail available
                 val firstDetail = this.versionGroupDetails.first()
                 description = firstDetail.moveLearnMethod.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
             }
-            // If versionGroupDetails is empty, description remains "Unknown" and finalLevelLearnedAt remains null
         }
     }
 
@@ -174,39 +171,41 @@ private fun NetworkPokemonMoveEntry.toDomain(): DomainPokemonMove {
     )
 }
 
-private fun NetworkPokemonDetail.toDomain(): DomainPokemonDetail {
+// Receiver type is PokemonDetail (alias for com.anuress.data.network.PokemonDetailResponse)
+private fun PokemonDetail.toDomain(): DomainPokemonDetail {
     return DomainPokemonDetail(
         id = this.id,
         name = this.name,
         height = this.height,
         weight = this.weight,
         abilities = this.abilities.map { it.toDomain() },
-        species = this.species.toDomain(),
-        sprites = this.sprites.toDomain(),
+        species = this.species.toDomain(), // this.species is NamedAPIResource (network)
+        sprites = this.sprites.toDomain(), // this.sprites is PokemonSprites (network)
         types = this.types.map { it.toDomain() },
         stats = this.stats.map { it.toDomain() },
-        moves = this.moves.map { it.toDomain() } // Map network moves to domain moves
-            .sortedWith(compareBy( // Sort the domain moves
-                { it.levelLearnedAt ?: Int.MAX_VALUE }, // Sort by level (nulls/non-level last)
-                { it.name } // Then by name
+        moves = this.moves.map { it.toDomain() }
+            .sortedWith(compareBy(
+                { it.levelLearnedAt ?: Int.MAX_VALUE },
+                { it.name }
             ))
     )
 }
 
-private fun NetworkGenusEntry.toDomain(): DomainGenus {
+private fun GenusEntry.toDomain(): DomainGenus {
     return DomainGenus(
         genus = this.genus,
-        language = this.language.toDomain()
+        language = this.language.toDomain() // this.language is NamedAPIResource (network)
     )
 }
 
-private fun NetworkPokemonSpecies.toDomain(): DomainPokemonSpecies {
+// Receiver type is PokemonSpecies (alias for com.anuress.data.network.PokemonSpeciesResponse)
+private fun PokemonSpecies.toDomain(): DomainPokemonSpecies {
     return DomainPokemonSpecies(
         id = this.id,
         name = this.name,
         genderRate = this.genderRate,
         hatchCounter = this.hatchCounter,
-        eggGroups = this.eggGroups.map { it.toDomain() },
+        eggGroups = this.eggGroups.map { it.toDomain() }, // this.eggGroups is List<NamedAPIResource (network)>
         genera = this.genera.map { it.toDomain() }
     )
 }
