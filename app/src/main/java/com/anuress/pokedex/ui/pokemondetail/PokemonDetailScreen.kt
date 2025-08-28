@@ -178,7 +178,6 @@ fun PokemonDetailScreen(
     val context = LocalContext.current
     val defaultBackgroundColor = MaterialTheme.colorScheme.surface
 
-    // Initialize dominantColor with the value from navigation if available
     var dominantColor by remember(uiState.initialColorInt) {
         mutableStateOf(uiState.initialColorInt?.let { Color(it) })
     }
@@ -186,21 +185,17 @@ fun PokemonDetailScreen(
     val currentTopSectionBackgroundColor = dominantColor ?: defaultBackgroundColor
     val topSectionTextColor = getTextColorForBackground(currentTopSectionBackgroundColor)
 
-    // LaunchedEffect to extract color from the detail image
-    // This will run if initialColorInt was null, or potentially refine the color if one was passed
     LaunchedEffect(uiState.pokemonDetail?.sprites?.other?.officialArtwork?.frontDefault) {
         val imageUrl = uiState.pokemonDetail?.sprites?.other?.officialArtwork?.frontDefault
         if (imageUrl == null) {
-            // If there's no image URL, and no initial color was set, don't try to load.
-            // If an initial color was set, we keep it.
-            if (dominantColor == null) dominantColor = null // Explicitly set to null if no image and no initial
+            if (dominantColor == null) dominantColor = null 
             return@LaunchedEffect
         }
 
         val imageLoader = context.imageLoader
         val request = ImageRequest.Builder(context)
             .data(imageUrl)
-            .allowHardware(false) // Important for Palette
+            .allowHardware(false) 
             .build()
         try {
             when (val result = imageLoader.execute(request)) {
@@ -213,15 +208,10 @@ fun PokemonDetailScreen(
                     }
                 }
                 else -> {
-                    // If image loading fails, and no initial color was set, set to null.
-                    // If an initial color was set, we might choose to keep it or clear it.
-                    // For now, let's clear it to indicate an issue with the detail image's color.
-                    // Alternatively, we could preserve uiState.initialColorInt if it was valid.
                     if (uiState.initialColorInt == null) dominantColor = null
                 }
             }
         } catch (_: Exception) {
-            // If exception occurs, and no initial color was set, set to null.
             if (uiState.initialColorInt == null) dominantColor = null
         }
     }
@@ -262,7 +252,8 @@ fun PokemonTypeChip(typeName: String) {
     Surface(
         color = typeColor,
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.padding(horizontal = 4.dp)
+        modifier = Modifier.padding(horizontal = 4.dp),
+        shadowElevation = 6.dp 
     ) {
         Text(
             text = typeName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
@@ -290,7 +281,7 @@ fun PokemonDetailScreenContent(
         contentAlignment = Alignment.TopCenter
     ) {
         when {
-            uiState.isLoading && uiState.initialColorInt == null -> { // Show loading only if no initial color
+            uiState.isLoading && uiState.initialColorInt == null -> { 
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
             uiState.errorMessage != null -> {
@@ -309,28 +300,17 @@ fun PokemonDetailScreenContent(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Top Section: Image, Name, ID, Types
+                    // Top Section: Name, ID, Types, Image
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(currentTopSectionBackgroundColor)
                             .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 24.dp)
                             .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally // Keep overall column centered
                     ) {
-                        if (uiState.isLoading && imageUrl == null) { // Still show loader if image specifically is loading
-                             CircularProgressIndicator(modifier = Modifier.size(100.dp).align(Alignment.CenterHorizontally).padding(bottom=50.dp))
-                        } else {
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = detail.name,
-                                modifier = Modifier.size(200.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(), // This Row for Name/ID is fine as is
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -348,14 +328,26 @@ fun PokemonDetailScreenContent(
                                 color = topSectionTextColor.copy(alpha = 0.7f)
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp)) 
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center
+                            horizontalArrangement = Arrangement.Start // Changed to Start for left alignment
                         ) {
                             detail.types.forEach { pokemonType ->
                                 PokemonTypeChip(typeName = pokemonType.type.name)
                             }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp)) 
+
+                        if (uiState.isLoading && imageUrl == null) { 
+                             CircularProgressIndicator(modifier = Modifier.size(100.dp).align(Alignment.CenterHorizontally).padding(bottom=50.dp))
+                        } else {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = detail.name,
+                                modifier = Modifier.size(200.dp) // Image itself remains centered due to Column's horizontalAlignment
+                            )
                         }
                     }
 
@@ -379,10 +371,8 @@ fun PokemonDetailScreenContent(
                     }
                 }
             }
-            // Fallback for when data is not loading, no error, but also no details (should ideally not happen if isLoading is handled correctly)
-            // Or if isLoading is true but an initialColorInt was provided, we show content with potential shimmer/placeholder for image.
             else -> {
-                 if (uiState.isLoading) { // Content is displayed because of initialColorInt, but data is still loading
+                 if (uiState.isLoading) { 
                      Column(modifier = Modifier.fillMaxSize()) { /* Show skeleton or current content */ }
                  } else {
                      Text(
