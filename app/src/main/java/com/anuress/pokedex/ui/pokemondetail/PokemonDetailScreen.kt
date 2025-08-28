@@ -361,7 +361,8 @@ fun PokemonDetailScreenContent(
                             PrimaryTabRow(
                                 selectedTabIndex = selectedTabIndex,
                                 containerColor = Color.Transparent, 
-                                contentColor = MaterialTheme.colorScheme.primary 
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                divider = { /* No divider */ }
                             ) {
                                 tabTitles.forEachIndexed { index, title ->
                                     Tab(
