@@ -1,5 +1,5 @@
 [versions]
-agp = "9.0.0-alpha02"
+agp = "8.9.2"
 kotlin = "2.0.21"
 coreKtx = "1.17.0"
 junit = "4.13.2"
@@ -19,6 +19,8 @@ paging = "3.3.6"
 androidxNavigation = "2.7.7"
 appcompat = "1.6.1"
 material = "1.12.0"
+mixpanel = "8.2.2"
+mixpanelSessionReplay = "1.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -49,6 +51,8 @@ androidx-paging-runtime-ktx = { group = "androidx.paging", name = "paging-runtim
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+mixpanel = { group = "com.mixpanel.android", name = "mixpanel-android", version.ref = "mixpanel" }
+mixpanel-session-replay = { group = "com.mixpanel.android", name = "mixpanel-android-session-replay", version.ref = "mixpanelSessionReplay" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

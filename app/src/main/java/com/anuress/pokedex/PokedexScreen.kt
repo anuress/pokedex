@@ -1,5 +1,6 @@
 package com.anuress.pokedex
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -11,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,6 +27,8 @@ import coil.request.ImageRequest
 import com.anuress.data.model.Pokemon
 import com.anuress.pokedex.ui.pokedex.PokedexViewModel
 import com.anuress.pokedex.ui.theme.PokedexTheme
+import com.mixpanel.android.sessionreplay.MPSessionReplay
+import com.mixpanel.android.sessionreplay.extensions.mpReplaySensitive
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
 
@@ -80,8 +82,10 @@ fun PokemonCard(
                 modifier = Modifier
                     .size(120.dp)
                     .padding(bottom = 12.dp)
+                    .mpReplaySensitive(false)
             )
             Text(
+                modifier = Modifier.mpReplaySensitive(false),
                 text = pokemon.name.replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
                 },
@@ -102,6 +106,24 @@ fun PokedexScreen(
 ) {
     val pokemonPagingItems: LazyPagingItems<Pokemon> = viewModel.pokemonPagingFlow.collectAsLazyPagingItems()
 
+    DisposableEffect(Unit) {
+        try {
+            MPSessionReplay.getInstance()?.startRecording()
+            Log.i("PokedexScreen", "Mixpanel Session Replay recording started.")
+        } catch (e: Exception) {
+            Log.e("PokedexScreen", "Error starting Mixpanel Session Replay", e)
+        }
+
+        onDispose {
+            try {
+                MPSessionReplay.getInstance()?.stopRecording()
+                Log.i("PokedexScreen", "Mixpanel Session Replay recording stopped.")
+            } catch (e: Exception) {
+                Log.e("PokedexScreen", "Error stopping Mixpanel Session Replay", e)
+            }
+        }
+    }
+
     PokedexTheme {
         Scaffold(
             topBar = {
@@ -111,7 +133,7 @@ fun PokedexScreen(
                 )
             }
         ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            Box(modifier = Modifier.padding(innerPadding).fillMaxSize().mpReplaySensitive(false)) {
                 if (pokemonPagingItems.loadState.refresh is LoadState.Loading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }

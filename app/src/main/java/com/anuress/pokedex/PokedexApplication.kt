@@ -1,9 +1,13 @@
 package com.anuress.pokedex
 
 import android.app.Application
+import android.util.Log
 import com.anuress.data.network.networkModule
 import com.anuress.data.repository.repositoryModule // Import repository module
 import com.anuress.pokedex.ui.pokedex.viewModelModule // Import ViewModel module
+import com.mixpanel.android.mpmetrics.MixpanelAPI // Mixpanel Import
+import com.mixpanel.android.sessionreplay.MPSessionReplay
+import com.mixpanel.android.sessionreplay.models.MPSessionReplayConfig
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -12,6 +16,7 @@ class PokedexApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Initialize Koin
         startKoin {
             androidLogger()
             androidContext(this@PokedexApplication)
@@ -20,6 +25,31 @@ class PokedexApplication : Application() {
                 repositoryModule, // Added repository module
                 viewModelModule   // Added ViewModel module
             )
+        }
+
+        // Initialize Mixpanel
+        val mixpanelToken = BuildConfig.MIXPANEL_PROJECT_TOKEN
+        if (mixpanelToken.isNotEmpty()) { // Check if token is not empty or the placeholder
+            val mixpanel = MixpanelAPI.getInstance(this, mixpanelToken, true)
+            // Optional: You can track an event like "App Opened" here if you want
+            // mixpanel.track("App Opened") 
+            Log.i("PokedexApplication", "Mixpanel initialized successfully.")
+
+            // Initialize Mixpanel Session Replay
+            try {
+                val config = MPSessionReplayConfig(
+                    wifiOnly = false,
+                    enableLogging = true,
+                    recordingSessionsPercent = 100.0
+                )
+                MPSessionReplay.initialize(this, mixpanelToken, mixpanel.distinctId, config)
+                Log.i("PokedexApplication", "Mixpanel Session Replay initialized and started if enabled.")
+            } catch (e: Exception) {
+                Log.e("PokedexApplication", "Error initializing Mixpanel Session Replay", e)
+            }
+
+        } else {
+            Log.w("PokedexApplication", "Mixpanel project token not found or is empty in BuildConfig. Mixpanel (and Session Replay) not initialized. Make sure it's set in local.properties.")
         }
     }
 }

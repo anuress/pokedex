@@ -1,15 +1,27 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    // Removed: alias(libs.plugins.kotlin.serialization) // Moved to :data module
+}
+
+// Function to load properties from local.properties
+fun getLocalProperty(key: String, projectRootDir: File): String {
+    val properties = Properties()
+    val localPropertiesFile = File(projectRootDir, "local.properties")
+    if (localPropertiesFile.isFile) {
+        properties.load(localPropertiesFile.inputStream())
+        return properties.getProperty(key) ?: ""
+    } else {
+        println("Warning: local.properties file not found in project root. Mixpanel token will not be set.")
+    }
+    return "" // Return empty string if not found or file doesn't exist
 }
 
 android {
     namespace = "com.anuress.pokedex"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.anuress.pokedex"
@@ -19,6 +31,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Read Mixpanel token from local.properties and add to BuildConfig
+        val mixpanelProjectToken = getLocalProperty("mixpanel.projectToken", rootProject.rootDir)
+        buildConfigField("String", "MIXPANEL_PROJECT_TOKEN", "\"$mixpanelProjectToken\"")
     }
 
     buildTypes {
@@ -28,6 +44,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // You might want to ensure the token is also available for release builds if needed
+            // val mixpanelProjectToken = getLocalProperty("mixpanel.projectToken", rootProject.rootDir)
+            // buildConfigField("String", "MIXPANEL_PROJECT_TOKEN", "\"$mixpanelProjectToken\"")
+        }
+        debug {
+            // BuildConfig fields are inherited from defaultConfig unless overridden
         }
     }
     compileOptions {
@@ -39,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true // Ensure buildConfig is enabled
     }
 }
 
@@ -65,6 +88,10 @@ dependencies {
 
     // Jetpack Paging Compose (for UI integration)
     implementation(libs.androidx.paging.compose)
+
+    // Mixpanel
+    implementation(libs.mixpanel)
+    implementation(libs.mixpanel.session.replay) // Added Mixpanel Session Replay
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
