@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.anuress.pokedex.ui.pokedex.PokedexScreen
 import com.anuress.pokedex.ui.pokemondetail.PokemonDetailScreen
 import com.anuress.pokedex.ui.theme.PokedexTheme
 

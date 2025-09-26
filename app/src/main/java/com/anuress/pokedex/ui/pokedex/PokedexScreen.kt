@@ -1,4 +1,4 @@
-package com.anuress.pokedex
+package com.anuress.pokedex.ui.pokedex
 
 import android.util.Log
 import androidx.compose.foundation.clickable
@@ -25,7 +25,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.anuress.data.model.Pokemon
-import com.anuress.pokedex.ui.pokedex.PokedexViewModel
+import com.anuress.pokedex.PokedexDestinations
 import com.anuress.pokedex.ui.theme.PokedexTheme
 import com.mixpanel.android.sessionreplay.MPSessionReplay
 import com.mixpanel.android.sessionreplay.extensions.mpReplaySensitive
