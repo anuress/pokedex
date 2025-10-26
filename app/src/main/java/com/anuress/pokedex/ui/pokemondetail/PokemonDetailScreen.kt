@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,6 +65,7 @@ import com.anuress.data.model.PokemonDetail
 import com.anuress.data.model.PokemonSpecies
 import com.anuress.data.model.PokemonStat
 import com.anuress.data.model.PokemonMove
+import com.anuress.pokedex.analytics.compose.SessionReplaySideEffect
 import com.anuress.pokedex.ui.theme.PokedexTheme
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
@@ -174,6 +176,8 @@ fun PokemonDetailScreen(
     navController: NavHostController,
     viewModel: PokemonDetailViewModel = koinViewModel()
 ) {
+    SessionReplaySideEffect("PokemonDetailScreen")
+
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val defaultTopSectionBgColor = MaterialTheme.colorScheme.surface 

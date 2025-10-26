@@ -1,16 +1,19 @@
 package com.anuress.pokedex.analytics
 
-import android.content.Context
 import android.util.Log
-import com.mixpanel.android.sessionreplay.utils.MPTracker
+import com.mixpanel.android.mpmetrics.MixpanelAPI
 import org.json.JSONObject
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 /**
  * A helper object for tracking Mixpanel events consistently throughout the application.
  */
-object AnalyticsHelper {
+object AnalyticsHelper : KoinComponent {
 
     private const val TAG = "AnalyticsHelper" // For logging
+
+    private val mixpanel: MixpanelAPI by inject()
 
     // Private function to safely get the Mixpanel instance.
     // Assumes Mixpanel has been initialized in the Application class.
@@ -22,7 +25,7 @@ object AnalyticsHelper {
         // No specific properties for this simple view event, but you could add some
         // (e.g., entry point like "AppOpen", "FromNotification")
         // val properties = JSONObject().apply { put("EntryPoint", "AppOpen") }
-        MPTracker.track(eventName /*, properties */)
+        mixpanel.track(eventName /*, properties */)
         Log.d(TAG, "Tracked Event: $eventName")
     }
 
@@ -37,8 +40,23 @@ object AnalyticsHelper {
             put("Pokemon Name", pokemonName)
             put("Dominant Color Available", dominantColorAvailable)
         }
-        MPTracker.track(eventName, properties)
+        mixpanel.track(eventName, properties)
         Log.d(TAG, "Tracked Event: $eventName, Properties: $properties")
+    }
+
+    fun trackPokemonItemViewed(
+        pokemonId: Int,
+        pokemonName: String
+    ) {
+        val eventName = "Pokemon Item Viewed"
+        val properties = JSONObject().apply {
+            put("Pokemon ID", pokemonId)
+            put("Pokemon Name", pokemonName)
+            // You could add properties like grid position if easily obtainable
+            // and relevant for your analytics.
+        }
+        mixpanel.track(eventName, properties)
+        Log.d(TAG, "Tracked Event: $eventName for $pokemonName")
     }
 
     // --- Interaction Events ---
@@ -53,7 +71,7 @@ object AnalyticsHelper {
             put("Pokemon ID", pokemonId)
             put("Pokemon Name", pokemonName)
         }
-        MPTracker.track(eventName, properties)
+        mixpanel.track(eventName, properties)
         Log.d(TAG, "Tracked Event: $eventName, Properties: $properties")
     }
 
@@ -68,7 +86,7 @@ object AnalyticsHelper {
             put("ItemCount", itemCount)
             put("Load Source", loadSource)
         }
-        MPTracker.track(eventName, properties)
+        mixpanel.track(eventName, properties)
         Log.d(TAG, "Tracked Event: $eventName, Properties: $properties")
     }
 
@@ -81,7 +99,7 @@ object AnalyticsHelper {
             put("Error Message", errorMessage ?: "Unknown error")
             put("Load Source", loadSource)
         }
-        MPTracker.track(eventName, properties)
+        mixpanel.track(eventName, properties)
         Log.d(TAG, "Tracked Event: $eventName, Properties: $properties")
     }
 }

@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PokedexApp() // Changed to a new root composable for clarity
+            PokedexApp()
         }
     }
 }

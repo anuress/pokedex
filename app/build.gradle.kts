@@ -45,8 +45,9 @@ android {
                 "proguard-rules.pro"
             )
             // You might want to ensure the token is also available for release builds if needed
-            // val mixpanelProjectToken = getLocalProperty("mixpanel.projectToken", rootProject.rootDir)
-            // buildConfigField("String", "MIXPANEL_PROJECT_TOKEN", "\"$mixpanelProjectToken\"")
+             val mixpanelProjectToken = getLocalProperty("mixpanel.projectToken", rootProject.rootDir)
+             buildConfigField("String", "MIXPANEL_PROJECT_TOKEN", "\"$mixpanelProjectToken\"")
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             // BuildConfig fields are inherited from defaultConfig unless overridden
